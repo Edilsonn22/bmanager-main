@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@layer base {
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+
+  }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: rgb(232, 230, 230);
+    color: black;
+  }
+
+  /* index.css */
+
+.main-content {
+  flex: 1;
+  overflow: auto;
+  padding: 7;
+  padding-block: 6;
+  background-color :gray 50;
+  
+}
+
+
+
+}
