@@ -9,7 +9,7 @@ function RegistarSaida(){
     const [quantidade, setQuantidade] = useState("");
 
     useEffect(() => {
-        fetch("http://localhost/bmanager/backend/produto/listar.php")
+        fetch("http://localhost:3000/api/produtos")
             .then((res) => res.json())
             .then((data) => {
                 if (data.sucesso) {

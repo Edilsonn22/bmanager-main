@@ -9,7 +9,7 @@ function RegistarEntrada() {
     const [quantidade, setQuantidade] = useState("");
 
     useEffect(() => {
-        fetch("http://localhost/bmanager/backend/produto/listar.php")
+        fetch("http://localhost:3000/api/produtos")
             .then((res) => res.json())
             .then((data) => {
                 if (data.sucesso) {
@@ -30,7 +30,7 @@ function RegistarEntrada() {
             return;
         }
         if (produtoSelecionado && quantidade) {
-            fetch("http://localhost/bmanager/backend/produto/entrada.php", {
+            fetch("http://localhost:3000/api/produtos", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
