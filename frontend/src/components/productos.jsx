@@ -44,9 +44,7 @@ function Productos() {
       .catch(err => console.error(err));
   }, []);
 
-  // =========================
-  // Delete
-  // =========================
+  
   const handleDelete = (id) => {
     if (window.confirm("Tem certeza que deseja excluir este produto?")) {
       setProdutos(produtos.filter((p) => Number(p.id) !== Number(id)));
@@ -54,9 +52,7 @@ function Productos() {
     }
   };
 
-  // =========================
-  // Status Estoque
-  // =========================
+ 
   const GetStatus = (quantidade, estoqueMinimo = 5) => {
     if (quantidade <= estoqueMinimo)
       return { text: "Baixo", class: "bg-red-100 text-red-700" };
@@ -66,9 +62,7 @@ function Productos() {
       return { text: "Bom", class: "bg-green-100 text-green-700" };
   };
 
-  // =========================
-  // Filtro Pesquisa
-  // =========================
+
   const produtosFiltrados = produtos.filter((p) =>
     p.nome.toLowerCase().includes(pesquisa.toLowerCase())
   );
