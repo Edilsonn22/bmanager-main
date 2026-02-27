@@ -95,10 +95,10 @@ function Fornecedor() {
                             <tbody className="bg-white divide-y divide-gray-200 text-center text-xs">
                                 {fornecedores.map((fornecedor) => (
                                     <tr key={fornecedor.id}>
-                                        <td className="px-6 py-3">{fornecedor.Nome}</td>
-                                        <td className="px-6 py-3">{fornecedor.Email}</td>
-                                        <td className="px-6 py-3">{fornecedor.Telefone}</td>
-                                        <td className="px-6 py-3">{fornecedor.Endereco}</td>
+                                        <td className="px-6 py-3">{fornecedor. nome}</td>
+                                        <td className="px-6 py-3">{fornecedor.email}</td>
+                                        <td className="px-6 py-3">{fornecedor.contacto}</td>
+                                        <td className="px-6 py-3">{fornecedor.endereco}</td>
 
 
                                         <td className="px-6 py-3 text-center">

@@ -33,7 +33,7 @@ function Dashboard() {
 
 
           const lowStock = data.produtos
-            .filter(p => Number(p.quantidade) <= Number(p.estoqueMinimo))
+            .filter(p => Number(p.quantidade) < 5)
             .map(p => ({
               name: p.nome,
               current: p.quantidade,
@@ -55,7 +55,7 @@ function Dashboard() {
             { label: 'Entradas', value: `${data.produtos.length} unidades`, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
             { label: 'Saida', value: `${lowStock.length} produtos`, icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-50' },
           ]);
-
+          
 
           setRecentMovements(data.produtos.slice(0, 5).map(p => ({
             name: p.nome,
@@ -82,7 +82,7 @@ function Dashboard() {
             Welcome back to your Business Manager Dashboard!
           </p>
         </div>
-        <Link to="/movOpcoes">
+        <Link to="/movimentar">
           <button className="bg-green-600 text-white px-2 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
             <svg
               className="w-5 h-5"

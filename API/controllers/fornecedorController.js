@@ -3,7 +3,7 @@ import pool from "../config/db.js";
 // GET - Listar todos os fornecedores
 export const listarFornecedores = async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT id, nome FROM Fornecedor");
+    const [rows] = await pool.query("SELECT id, nome, email, contacto, endereco FROM Fornecedor");
     res.json({
       sucesso: true,
       fornecedores: rows
