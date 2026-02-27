@@ -131,7 +131,7 @@ useEffect(() => {
         </div>
 
         <form className="p-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols- gap-4">
             <div>
               <label className="block text-gray-700 mb-2">
                 Nome do Produto *

@@ -10,11 +10,9 @@ import AdicionarProduto from "./components/adicionarProduto";
 import EditarProduto from "./components/editarProduto";
 import AdicionarFornecedor from "./components/adicionarFornecedor";
 import EditarFornecedor from "./components/editarFornecedor";
-import Movimentar from "./components/movimentar"; 
-import MovOpcoes from "./components/movOpcoes";
-import RegistarEntrada from "./components/registarEntrada";
-import RegistarSaida from "./components/registarSaida";
+import MovOpcoes from "./components/movimentar";
 import AdicionarCategoria from "./components/adicionarCategoria";
+import RegistarMovimento from "./components/movimentar";
 
 function App() {
   return (
@@ -25,10 +23,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/overview" element={<Dashboard />} />
-          <Route path="/movimentar" element={<Movimentar />} />
-          <Route path="/movOpcoes" element={<MovOpcoes />} />
-          <Route path="/registarEntrada" element={<RegistarEntrada/>} />
-          <Route path="/registarSaida" element={<RegistarSaida/>} />
+          <Route path="/movimentar" element={<RegistarMovimento />} />  
           <Route path="/productos" element={<Productos />} />
           <Route path="/adicionarProduto" element={<AdicionarProduto />} />
           <Route path="/editarProduto/:id" element={<EditarProduto />} />

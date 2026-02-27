@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { deletarProduto } from "../services/api";
+
 
 function Productos() {
   const [produtos, setProdutos] = useState([]);
@@ -8,9 +8,7 @@ function Productos() {
   const [fornecedores, setFornecedores] = useState([]);
   const [pesquisa, setPesquisa] = useState("");
 
-  // =========================
-  // Buscar Produtos
-  // =========================
+
   useEffect(() => {
     fetch("http://localhost:3000/api/produtos")
       .then(res => res.json())
@@ -20,9 +18,7 @@ function Productos() {
       .catch(err => console.error(err));
   }, []);
 
-  // =========================
-  // Buscar Categorias
-  // =========================
+
   useEffect(() => {
     fetch("http://localhost:3000/api/categorias")
       .then(res => res.json())
@@ -32,9 +28,7 @@ function Productos() {
       .catch(err => console.error(err));
   }, []);
 
-  // =========================
-  // Buscar Fornecedores
-  // =========================
+
   useEffect(() => {
     fetch("http://localhost:3000/api/fornecedores")
       .then(res => res.json())
@@ -45,12 +39,31 @@ function Productos() {
   }, []);
 
   
-  const handleDelete = (id) => {
-    if (window.confirm("Tem certeza que deseja excluir este produto?")) {
-      setProdutos(produtos.filter((p) => Number(p.id) !== Number(id)));
-      alert("Produto excluído com sucesso!");
-    }
-  };
+const handleDelete = (id) => {
+  if (window.confirm("Tem certeza que deseja excluir este produto?")) {
+    // Atualiza a lista de produtos localmente
+    setProdutos(produtos.filter((p) => Number(p.id) !== Number(id)));
+
+    // Faz a requisição para excluir o produto na API
+    fetch(`http://localhost:3000/api/fornecedores/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    .then(response => {
+      if (response.ok) {
+        alert("Produto excluído com sucesso!");
+      } else {
+        alert('Erro ao excluir produto');
+      }
+    })
+    .catch(error => {
+      console.error('Erro ao excluir produto:', error);
+      alert('Erro ao excluir produto');
+    });
+  }
+};
 
  
   const GetStatus = (quantidade, estoqueMinimo = 5) => {
