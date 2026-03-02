@@ -59,9 +59,9 @@ function RegistarMovimento() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id_Produto: Number(produto.id),                  // converte para número
-          tipo: tipoMovimento.toLowerCase(),       // "entrada" ou "saida"
-          quantidade: Number(quantidade),          // converte para número
+          id_Produto: Number(produto.id),                  
+          tipo: tipoMovimento.toLowerCase(),       
+          quantidade: Number(quantidade),  
         }),
       });
 

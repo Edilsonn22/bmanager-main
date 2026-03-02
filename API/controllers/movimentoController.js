@@ -1,47 +1,67 @@
-import pool from "../config/db.js";
-
-// POST - Criar movimento (entrada ou saída)
 export const createMovimento = async (req, res) => {
   try {
-    const { id , tipo, quantidade } = req.body;
+    const { id_Produto, tipo, quantidade } = req.body;
 
-    if (!id == null || !tipo == null|| !quantidade == null) {
-      return res.status(400).json({ sucesso: false, erro: "Todos os campos são obrigatórios." });
+    if (!id_Produto || !tipo || !quantidade) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: "Todos os campos são obrigatórios."
+      });
     }
 
     if (!["entrada", "saida"].includes(tipo)) {
-      return res.status(400).json({ sucesso: false, erro: "Tipo inválido." });
+      return res.status(400).json({
+        sucesso: false,
+        erro: "Tipo inválido."
+      });
     }
 
-    // Verificar produto
-    const [produtos] = await pool.query("SELECT * FROM produto WHERE id = ?", [id]);
+    const qtd = Number(quantidade);
+
+    const [produtos] = await pool.query(
+      "SELECT * FROM Produto WHERE id = ?",
+      [id_Produto]
+    );
+
     if (produtos.length === 0) {
-      return res.status(404).json({ sucesso: false, erro: "Produto não encontrado." });
+      return res.status(404).json({
+        sucesso: false,
+        erro: "Produto não encontrado."
+      });
     }
 
     const produto = produtos[0];
 
-    // Impedir saída maior que estoque
-    if (tipo === "saida" && quantidade > produto.quantidade) {
-      return res.status(400).json({ sucesso: false, erro: "Estoque insuficiente." });
+    if (tipo === "saida" && qtd > produto.quantidade) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: "Estoque insuficiente."
+      });
     }
 
-    // Atualizar estoque
-    const novaQuantidade = tipo === "entrada"
-      ? produto.quantidade + quantidade
-      : produto.quantidade - quantidade;
+    const novaQuantidade =
+      tipo === "entrada"
+        ? produto.quantidade + qtd
+        : produto.quantidade - qtd;
 
-    await pool.execute("UPDATE produto SET quantidade = ? WHERE id = ?", [novaQuantidade, produto_id]);
+    await pool.execute(
+      "UPDATE Produto SET quantidade = ? WHERE id = ?",
+      [novaQuantidade, id_Produto]
+    );
 
-    // Inserir movimento
-    const sql = "INSERT INTO movimentos (produto_id, tipo, quantidade) VALUES (?, ?, ?)";
-    const [result] = await pool.execute(sql, [id, tipo, quantidade]);
+    const sql = "INSERT INTO Movimentos (id_Produto, tipo, quantidade) VALUES (?, ?, ?)";
+    const [result] = await pool.execute(sql, [id_Produto, tipo, qtd]);
 
     res.status(201).json({ sucesso: true, id: result.insertId });
+
   } catch (error) {
-    res.status(500).json({ sucesso: false, erro: error.message });
+    console.error(error);
+    res.status(500).json({
+      sucesso: false,
+      erro: error.message
+    });
   }
-};
+}
 
 // GET - Listar todos os movimentos
 export const getAllMovimentos = async (req, res) => {
@@ -58,7 +78,7 @@ export const getAllMovimentos = async (req, res) => {
     res.status(500).json({ sucesso: false, erro: error.message });
   }
 };
-
+{/*
 // GET - Buscar movimento por ID
 export const getMovimentoById = async (req, res) => {
   try {
@@ -120,4 +140,4 @@ export const deleteMovimento = async (req, res) => {
   } catch (error) {
     res.status(500).json({ sucesso: false, erro: error.message });
   }
-};
+};*/}

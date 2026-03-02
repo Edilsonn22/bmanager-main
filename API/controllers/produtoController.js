@@ -25,7 +25,7 @@ export const createProduto = async (req, res) => {
 // GET - Listar todos os produtos
 export const getAllProdutos = async (req, res) => {
   try {
-    const [produtos] = await pool.query("SELECT * FROM produto");
+    const [produtos] = await pool.query("SELECT * FROM Produto");
     res.status(200).json({ sucesso: true, produtos });
   } catch (error) {
     res.status(500).json({ sucesso: false, erro: error.message });
@@ -36,7 +36,7 @@ export const getAllProdutos = async (req, res) => {
 export const getProdutoById = async (req, res) => {
   try {
     const { id } = req.params;
-    const [produtos] = await pool.query("SELECT * FROM produto WHERE id = ?", [id]);
+    const [produtos] = await pool.query("SELECT * FROM Produto WHERE id = ?", [id]);
 
     if (produtos.length === 0) {
       return res.status(404).json({ sucesso: false, erro: "Produto não encontrado" });
@@ -48,14 +48,14 @@ export const getProdutoById = async (req, res) => {
   }
 };
 
-// PUT - Atualizar produto
+
 export const updateProduto = async (req, res) => {
   try {
     const { id } = req.params;
     const { nome, idCategoria, preco, idFornecedor, quantidade } = req.body;
 
     const sql = `
-      UPDATE produto
+      UPDATE Produto
       SET nome = ?, idCategoria = ?, preco = ?, idFornecedor = ?, quantidade = ?
       WHERE id = ?
     `;
@@ -76,7 +76,7 @@ export const updateProduto = async (req, res) => {
 export const deleteProduto = async (req, res) => {
   try {
     const { id } = req.params;
-    const [result] = await pool.execute("DELETE FROM produto WHERE id = ?", [id]);
+    const [result] = await pool.execute("DELETE FROM Produto WHERE id = ?", [id]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ sucesso: false, erro: "Produto não encontrado" });
