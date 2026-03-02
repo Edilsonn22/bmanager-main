@@ -55,12 +55,20 @@ export const updateProduto = async (req, res) => {
     const { nome, idCategoria, preco, idFornecedor, quantidade } = req.body;
 
     const sql = `
-      UPDATE Produto
-      SET nome = ?, idCategoria = ?, preco = ?, idFornecedor = ?, quantidade = ?
+      UPDATE Produto 
+      SET nome = ?, idCategoria = ?, preco = ?, idFornecedor = ?, quantidade = ? 
       WHERE id = ?
     `;
 
-    const [result] = await pool.execute(sql, [nome, idCategoria, preco, idFornecedor, quantidade, id]);
+    // A ordem no array deve ser a mesma dos '?' no SQL
+    const [result] = await pool.execute(sql, [
+      nome, 
+      idCategoria, 
+      preco, 
+      idFornecedor, 
+      quantidade, 
+      id
+    ]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ sucesso: false, erro: "Produto não encontrado" });
@@ -71,6 +79,7 @@ export const updateProduto = async (req, res) => {
     res.status(500).json({ sucesso: false, erro: error.message });
   }
 };
+
 
 // DELETE - Remover produto
 export const deleteProduto = async (req, res) => {
