@@ -87,7 +87,7 @@ const handleDelete = (id) => {
           <p className="text-gray-600 mb-">Gerencie os produtos do seu estoque</p>
         </div>
         <Link to="/adicionarProduto">
-          <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
+          <button className="bg-indigo-600 text-white px-7 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
             Adicionar
           </button>
         </Link>

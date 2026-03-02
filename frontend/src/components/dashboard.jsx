@@ -23,14 +23,13 @@ function Dashboard() {
   const [stats, setStats] = useState(defaultStats);
   const [recentMovements, setRecentMovements] = useState([]);
 
-
   useEffect(() => {
+    // Buscar produtos para estatísticas
     fetch("http://localhost:3000/api/produtos")
       .then(res => res.json())
       .then(data => {
         if (data.sucesso) {
           setProdutos(data.produtos);
-
 
           const lowStock = data.produtos
             .filter(p => Number(p.quantidade) < 5)
@@ -43,7 +42,6 @@ function Dashboard() {
           setLowStockItems(lowStock);
 
           const totalProdutos = data.produtos.length;
-
           const valorEstoque = data.produtos.reduce(
             (acc, p) => acc + Number(p.preco) * Number(p.quantidade),
             0
@@ -52,25 +50,34 @@ function Dashboard() {
           setStats([
             { label: 'Total Produtos', value: totalProdutos, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
             { label: 'Valor do Estoque', value: `${valorEstoque.toFixed()} Mzn`, icon: DollarSign, color: 'text-green-500', bg: 'bg-green-50' },
-            { label: 'Entradas', value: `${data.produtos.length} unidades`, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+            { label: 'Entradas', value: `${lowStock.length} unidades`, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
             { label: 'Saida', value: `${lowStock.length} produtos`, icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-50' },
           ]);
-          
-
-          setRecentMovements(data.produtos.slice(0, 5).map(p => ({
-            name: p.nome,
-            action: `Quantidade: ${p.quantidade}`,
-            date: new Date().toLocaleDateString(),
-            icon: Number(p.quantidade) > Number(p.estoqueMinimo) ? TrendingDown : TrendingUp,
-            color: Number(p.quantidade) > Number(p.estoqueMinimo) ? 'text-emerald-500' : 'text-emerald-500',
-            bg: Number(p.quantidade) > Number(p.estoqueMinimo) ? 'bg-emerald-50' : 'bg-emerald-50'
-          })));
-
-        } else {
-          console.error(data.erro);
         }
       })
-      .catch(err => console.error("Erro:", err));
+      .catch(err => console.error("Erro ao carregar produtos:", err));
+
+    // Buscar movimentos recentes reais
+    fetch("http://localhost:3000/api/movimentos")
+      .then(res => res.json())
+      .then(data => {
+        if (data.sucesso) {
+          // Pega os 5 movimentos mais recentes
+          const recent = data.movimentos
+            .slice(0, 5)
+            .map(m => ({
+              name: m.nomeProduto,
+              action: `${m.tipo === 'entrada' ? 'Entrada' : 'Saída'}: ${m.quantidade}`,
+              date: new Date(m.created_at).toLocaleDateString("pt-BR"),
+              icon: m.tipo === 'entrada' ? TrendingUp : TrendingDown,
+              color: m.tipo === 'entrada' ? 'text-emerald-500' : 'text-orange-500',
+              bg: m.tipo === 'entrada' ? 'bg-emerald-50' : 'bg-orange-50'
+            }));
+
+          setRecentMovements(recent);
+        }
+      })
+      .catch(err => console.error("Erro ao carregar movimentos:", err));
   }, []);
 
   return (
@@ -100,13 +107,9 @@ function Dashboard() {
             Movimentar
           </button>
         </Link>
-
       </div>
 
-
-
-
-
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mb-10">
         {stats.map(stat => (
           <div key={stat.label} className="bg-white p-4 rounded-md shadow-sm flex flex-col items-center">
@@ -160,7 +163,7 @@ function Dashboard() {
           <p className="text-gray-500 text-sm">Nenhum movimento recente.</p>
         ) : (
           recentMovements.map(item => (
-            <div key={item.name} className="flex justify-between px-4 py-3 mb-">
+            <div key={item.name + item.date} className="flex justify-between px-4 py-3 mb-2">
               <div className="flex items-center gap-2">
                 <div className={`w-8 h-8 ${item.bg} flex items-center justify-center rounded-md`}>
                   <item.icon className={`w-4 h-4 ${item.color}`} />
