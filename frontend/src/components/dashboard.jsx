@@ -51,7 +51,7 @@ function Dashboard() {
 
           setStats([
             { label: 'Total Produtos', value: totalProdutos, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { label: 'Valor do Estoque', value: `${valorEstoque.toFixed(2)} Mzn`, icon: DollarSign, color: 'text-green-500', bg: 'bg-green-50' },
+            { label: 'Valor do Estoque', value: `${valorEstoque.toFixed()} Mzn`, icon: DollarSign, color: 'text-green-500', bg: 'bg-green-50' },
             { label: 'Entradas', value: `${data.produtos.length} unidades`, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
             { label: 'Saida', value: `${lowStock.length} produtos`, icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-50' },
           ]);
@@ -132,7 +132,7 @@ function Dashboard() {
           <p className="text-gray-500 text-sm">Nenhum produto com estoque baixo.</p>
         ) : (
           lowStockItems.map(item => (
-            <div key={item.name} className="bg-red-50 w-full rounded-2xl px-4 py-3 mb-5">
+            <div key={item.name} className="bg-red-50 w-full rounded-2xl px-4 py-2 mb-4">
               <div className="flex justify-between items-center">
                 <div>
                   <p className="font-medium text-gray-900">{item.name}</p>

@@ -15,7 +15,6 @@ function EditarProduto() {
   // Para popular selects
   const [categorias, setCategorias] = useState([]);
   const [fornecedores, setFornecedores] = useState([]);
-
   const [loading, setLoading] = useState(true);
 
   // Função para buscar produto
@@ -34,10 +33,10 @@ function EditarProduto() {
     }
   };
 
-
-  const atualizarProduto = async (dados) => {
+  // Função para atualizar produto (CORRIGIDA: agora recebe id e dados)
+  const atualizarProduto = async (id, dados) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/produtos/${dados.id}`, {
+      const res = await fetch(`http://localhost:3000/api/produtos/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dados),
@@ -68,10 +67,11 @@ function EditarProduto() {
       const produto = await obterProduto(id);
       if (produto) {
         setNome(produto.nome);
-        setCategoria(produto.categoria);   // deve ser id da categoria
-        setPreco(produto.preco);
-        setFornecedor(produto.fornecedor); // deve ser id do fornecedor
-        setQuantidade(produto.quantidade);
+        // Ajuste aqui: use os nomes que vêm do seu banco (ex: idCategoria ou categoria_id)
+        setCategoria(produto.idCategoria?.toString() || ''); 
+        setPreco(produto.preco?.toString() || '');
+        setFornecedor(produto.idFornecedor?.toString() || '');
+        setQuantidade(produto.quantidade?.toString() || '');
       }
       setLoading(false);
     };
@@ -80,13 +80,23 @@ function EditarProduto() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const dados = { id, nome, categoria, preco, fornecedor, quantidade };
-    const res = await atualizarProduto(dados);
+
+    // Objeto formatado para o seu Controller do Backend
+    const dados = {
+      nome: nome || null,
+      idCategoria: categoria ? Number(categoria) : null,
+      preco: preco ? Number(preco) : null,
+      idFornecedor: fornecedor ? Number(fornecedor) : null,
+      quantidade: quantidade ? Number(quantidade) : null,
+    };
+
+    const res = await atualizarProduto(id, dados);
+
     if (res.sucesso) {
       alert("Produto atualizado com sucesso!");
       navigate(-1);
     } else {
-      alert("Erro ao atualizar produto");
+      alert("Erro ao atualizar produto: " + (res.erro || "Erro desconhecido"));
     }
   };
 
@@ -174,6 +184,7 @@ function EditarProduto() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
               />
             </div>
+
           </div>
 
           <div className="flex gap-3 mt-6">
