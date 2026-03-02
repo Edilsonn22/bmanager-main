@@ -41,11 +41,10 @@ function Productos() {
   
 const handleDelete = (id) => {
   if (window.confirm("Tem certeza que deseja excluir este produto?")) {
-    // Atualiza a lista de produtos localmente
+  
     setProdutos(produtos.filter((p) => Number(p.id) !== Number(id)));
 
-    // Faz a requisição para excluir o produto na API
-    fetch(`http://localhost:3000/api/fornecedores/${id}`, {
+    fetch(`http://localhost:3000/api/produtos/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
