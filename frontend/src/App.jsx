@@ -13,6 +13,7 @@ import EditarFornecedor from "./components/editarFornecedor";
 import MovOpcoes from "./components/movimentar";
 import AdicionarCategoria from "./components/adicionarCategoria";
 import RegistarMovimento from "./components/movimentar";
+import Financeiro from "./components/financeiro";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <Route path="/adicionarProduto" element={<AdicionarProduto />} />
           <Route path="/editarProduto/:id" element={<EditarProduto />} />
           <Route path="/movimentos" element={<Movimentos />} />
+          <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/fornecedor" element={<Fornecedor />} />
           <Route path="/adicionarFornecedor" element={<AdicionarFornecedor />} />
           <Route path="/editarFornecedor/:id" element={<EditarFornecedor />} />

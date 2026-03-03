@@ -1,11 +1,13 @@
 import { NavLink } from "react-router-dom";
 
-import { Package, BarChart3, ArrowLeftRight, Users, Tags, ChartColumn, LogOut } from "lucide-react";
+import { Package, BarChart3, ArrowLeftRight, Wallet, Users, Tags, ChartColumn, LogOut } from "lucide-react";
+
 
 const menuItems = [
   { id: "overview", label: "Overview", icon: BarChart3 },
   { id: "productos", label: "Produtos", icon: Package },
   { id: "movimentos", label: "Movimentos", icon: ArrowLeftRight },
+  {id: "financeiro", label: "Financeiros", icon: Wallet},
   { id: "fornecedor", label: "Fornecedores", icon: Users },
   { id: "categoria", label: "Categorias", icon: Tags },
   { id: "relatorios", label: "Relatórios", icon: ChartColumn },
@@ -27,7 +29,7 @@ function Navbar() {
             key={item.id}
             to={item.id === "overview" ? "/" : `/${item.id.toLowerCase()}`}
             className={({ isActive }) =>
-              `w-full flex items-center gap-2 px-3 py-4 rounded-md mb-3 transition-colors ${isActive
+              `w-full flex items-center gap-2 px-3 py-3 rounded-md mb-2 transition-colors ${isActive
                 ? "bg-indigo-50 text-indigo-600"
                 : "text-gray-600 hover:bg-gray-50"
               }`

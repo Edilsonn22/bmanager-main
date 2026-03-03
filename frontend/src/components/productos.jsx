@@ -19,7 +19,7 @@ function Productos() {
   }, []);
 
 
-  useEffect(() => {
+  useEffect(() => { 
     fetch("http://localhost:3000/api/categorias")
       .then(res => res.json())
       .then(data => {
@@ -115,6 +115,7 @@ const handleDelete = (id) => {
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">Fornecedor</th>
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">Quantidade</th>
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">Preço Fornecedor</th>
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">Preço</th>
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">Ações</th>
               </tr>
@@ -150,6 +151,8 @@ const handleDelete = (id) => {
                         {GetStatus(produto.quantidade).text}
                       </span>
                     </td>
+
+                    <td className="px-6 py-3">{produto.precoFornecedor}</td>
 
                     <td className="px-6 py-3">{produto.preco}</td>
 
