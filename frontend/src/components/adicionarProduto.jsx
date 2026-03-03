@@ -6,6 +6,7 @@ function AdicionarProduto() {
 
   const [nome, setNome] = useState("");
   const [idCategoria, setIdCategoria] = useState(""); 
+  const [precoFornecedor, setPrecoFornecedor] = useState("");
   const [preco, setPreco] = useState("");
   const [idFornecedor, setIdFornecedor] = useState("");
   const [quantidade, setQuantidade] = useState("");
@@ -57,6 +58,11 @@ useEffect(() => {
       return;
     }
 
+    if (parseInt(precoFornecedor) <= 0) {
+      setMensagem("O preço deve ser maior que zero!");
+      return;
+    }
+
     if (parseFloat(preco) <= 0) {
       setMensagem("O preço deve ser maior que zero!");
       return;
@@ -70,6 +76,7 @@ useEffect(() => {
   const dados = {
   nome,
   idCategoria: parseInt(idCategoria),
+  precoFornecedor: parseFloat(precoFornecedor),
   preco: parseFloat(preco),
   idFornecedor: parseInt(idFornecedor),
   quantidade: parseInt(quantidade),
@@ -99,6 +106,7 @@ useEffect(() => {
         // Limpar formulário
         setNome("");
         setIdCategoria("");
+        setPrecoFornecedor(""),
         setPreco("");
         setIdFornecedor("");
         setQuantidade("");
@@ -131,7 +139,7 @@ useEffect(() => {
         </div>
 
         <form className="p-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols- gap-4">
+          <div className="grid grid-cols-2 md:grid-cols- gap-4">
             <div>
               <label className="block text-gray-700 mb-2">
                 Nome do Produto *
@@ -160,6 +168,19 @@ useEffect(() => {
                   </option>
                 ))}
               </select>
+            </div>
+
+              <div>
+              <label className="block text-gray-700 mb-2">Preço Fornecedor *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={precoFornecedor}
+                onChange={(e) => setPrecoFornecedor(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-100"
+              />
             </div>
 
             <div>

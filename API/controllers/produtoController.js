@@ -3,18 +3,18 @@ import pool from "../config/db.js";
 // POST - Criar Produto
 export const createProduto = async (req, res) => {
   try {
-    const { nome, idCategoria, preco, idFornecedor, quantidade } = req.body;
+    const { nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade } = req.body;
 
-    if (!nome || !idCategoria || !preco || !idFornecedor || !quantidade) {
+    if (!nome || !idCategoria ||!precoFornecedor || !preco || !idFornecedor || !quantidade) {
       return res.status(400).json({ sucesso: false, erro: "Todos os campos são obrigatórios." });
     }
 
     const sql = `
-      INSERT INTO produto (nome, idCategoria, preco, idFornecedor, quantidade)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO produto (nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
 
-    const [result] = await pool.execute(sql, [nome, idCategoria, preco, idFornecedor, quantidade]);
+    const [result] = await pool.execute(sql, [nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade]);
 
     res.status(201).json({ sucesso: true, id: result.insertId });
   } catch (error) {
@@ -52,11 +52,11 @@ export const getProdutoById = async (req, res) => {
 export const updateProduto = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, idCategoria, preco, idFornecedor, quantidade } = req.body;
+    const { nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade } = req.body;
 
     const sql = `
       UPDATE Produto 
-      SET nome = ?, idCategoria = ?, preco = ?, idFornecedor = ?, quantidade = ? 
+      SET nome = ?, idCategoria = ?, precoFornecedor, preco = ?, idFornecedor = ?, quantidade = ? 
       WHERE id = ?
     `;
 
@@ -64,6 +64,7 @@ export const updateProduto = async (req, res) => {
     const [result] = await pool.execute(sql, [
       nome, 
       idCategoria, 
+      precoFornecedor,
       preco, 
       idFornecedor, 
       quantidade, 
