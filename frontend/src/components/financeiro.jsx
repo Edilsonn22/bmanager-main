@@ -94,7 +94,7 @@ function Financeiro() {
         <div>
           <h3 className="font-semibold text-gray-900 mb-1">Demostracao de Resultado</h3>
           <div>
-            <p className="text-gray-500 text-sm mb-7 ">Analise Financeira Detalhada</p>
+            <p className="text-gray-500 text-md mb-7 ">Analise Financeira Detalhada</p>
           </div>
 
           <div className="bg-green-100 rounded-xl p-4 mb-5">
@@ -123,7 +123,22 @@ function Financeiro() {
         <h2 className="font-semibold text-gray-900 mb-1">Transacoes</h2>
         <p className="text-gray-500  mb-7 ">Visualizar e gerir todas as transacoes financeiras</p>
 
-        
+        <div  className=" bg-white border-gray-200 overflow-hidden shadow">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Categoria</th>
+                  <th>Descricao</th>
+                  <th>Valor</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
 
 
       </div>
