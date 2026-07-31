@@ -68,25 +68,46 @@ export const createMovimento = async (req, res) => {
 // GET - Listar todos os movimentos
 export const getAllMovimentos = async (req, res) => {
   try {
+
     const sql = `
       SELECT 
-        m.id, 
-        m.id_Produto AS produtoId,
-        m.tipo, 
-        m.quantidade, 
-        m.created_at, 
-        p.nome AS nomeProduto
+        m.id,
+        m.id_Produto,
+        m.tipo,
+        m.quantidade,
+        m.created_at,
+
+        p.nome AS nomeProduto,
+        p.preco AS preco,
+        p.precoFornecedor AS precoFornecedor
+
       FROM movimentos m
-      JOIN Produto p ON p.id = m.id_Produto
+
+      INNER JOIN Produto p
+      ON p.id = m.id_Produto
+
       ORDER BY m.created_at DESC
     `;
 
+
     const [movimentos] = await pool.query(sql);
 
-    res.status(200).json({ sucesso: true, movimentos });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ sucesso: false, erro: error.message });
+
+    res.json({
+      sucesso:true,
+      movimentos
+    });
+
+
+  } catch(error){
+
+    console.log(error);
+
+    res.status(500).json({
+      sucesso:false,
+      erro:error.message
+    });
+
   }
 };
 {/*

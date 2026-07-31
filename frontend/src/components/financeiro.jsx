@@ -1,146 +1,302 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
-import {
-  DollarSign,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
+import { DollarSign, TrendingUp, Wallet } from "lucide-react";
 
 function Financeiro() {
-  const defaultStats = [
+  const [movimentos, setMovimentos] = useState([]);
+
+  const [receitaTotal, setReceitaTotal] = useState(0);
+  const [custoProdutos, setCustoProdutos] = useState(0);
+  const [lucroBruto, setLucroBruto] = useState(0);
+  const [lucroLiquido, setLucroLiquido] = useState(0);
+
+  useEffect(() => {
+    carregarFinanceiro();
+  }, []);
+
+  const carregarFinanceiro = async () => {
+    try {
+      const resposta = await fetch("http://localhost:3000/api/movimentos");
+
+      const data = await resposta.json();
+
+      if (data.sucesso) {
+        setMovimentos(data.movimentos);
+
+        // Apenas vendas
+        const vendas = data.movimentos.filter((item) => item.tipo === "saida");
+
+        // Receita total
+        const receita = vendas.reduce((total, item) => {
+          return total + Number(item.quantidade) * Number(item.preco);
+        }, 0);
+
+        // Custo dos produtos vendidos
+        const custo = vendas.reduce((total, item) => {
+          return total + Number(item.quantidade) * Number(item.precoFornecedor);
+        }, 0);
+
+        const lucro = receita - custo;
+
+        setReceitaTotal(receita);
+
+        setCustoProdutos(custo);
+
+        setLucroBruto(lucro);
+
+        setLucroLiquido(lucro);
+      }
+    } catch (error) {
+      console.log("Erro ao carregar financeiro:", error);
+    }
+  };
+
+  const cards = [
     {
-      label: "Receita de Vendas",
-      value: "0 Mzn",
+      nome: "Receita de Vendas",
+      valor: receitaTotal,
       icon: TrendingUp,
-      color: "text-green-500",
-      bg: "bg-green-50",
+      cor: "text-green-500",
+      fundo: "bg-green-50",
     },
+
     {
-      label: "Custo dos Produtos Vendidos",
-      value: "0 Mzn",
+      nome: "Custo dos Produtos Vendidos",
+      valor: custoProdutos,
       icon: DollarSign,
-      color: "text-orange-500",
-      bg: "bg-orange-50",
+      cor: "text-orange-500",
+      fundo: "bg-orange-50",
     },
+
     {
-      label: "Lucro Bruto",
-      value: "0 Mzn",
+      nome: "Lucro Bruto",
+      valor: lucroBruto,
       icon: DollarSign,
-      color: "text-green-500",
-      bg: "bg-green-50",
+      cor: "text-green-500",
+      fundo: "bg-green-50",
     },
+
     {
-      label: "Lucro Líquido",
-      value: "0 Mzn",
+      nome: "Lucro Líquido",
+      valor: lucroLiquido,
       icon: Wallet,
-      color: "text-blue-500",
-      bg: "bg-blue-50",
+      cor: "text-blue-500",
+      fundo: "bg-blue-50",
     },
   ];
-
-  const [stats] = useState(defaultStats);
 
   return (
     <div className="flex-1 h-screen overflow-auto p-7 py-6 bg-gray-50">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+
+      <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold">Gestão Financeira</h2>
+
           <p className="text-gray-700 text-xl">
             Gerencie as finanças do seu negócio!
           </p>
         </div>
 
         <Link to="/movimentar">
-          <button className="bg-black text-white px-2 py-2 rounded-lg hover:bg-black/50 transition flex items-center gap-2">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Movimentar
+          <button
+            className="
+bg-black
+text-white
+px-4
+py-2
+rounded-lg
+"
+          >
+            + Movimentar
           </button>
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mb-10">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-white p-4 rounded-md shadow-sm flex flex-col items-center"
-          >
+      {/* Cards */}
+
+      <div
+        className="
+grid
+grid-cols-1
+md:grid-cols-2
+lg:grid-cols-4
+gap-7
+mb-10
+"
+      >
+        {cards.map((card) => {
+          const Icon = card.icon;
+
+          return (
             <div
-              className={`w-12 h-12 ${stat.bg} flex items-center justify-center rounded-lg mb-2`}
+              key={card.nome}
+              className="
+bg-white
+p-5
+rounded-md
+shadow-sm
+flex
+flex-col
+items-center
+"
             >
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              <div
+                className={`
+w-12
+h-12
+${card.fundo}
+rounded-lg
+flex
+items-center
+justify-center
+`}
+              >
+                <Icon className={`w-6 h-6 ${card.cor}`} />
+              </div>
+
+              <p className="text-gray-600 mt-3 text-center">{card.nome}</p>
+
+              <p className="font-bold text-lg">
+                {card.valor.toLocaleString()} MZN
+              </p>
             </div>
-            <p className="text-sm text-gray-600">{stat.label}</p>
-            <p className="text-lg font-bold">{stat.value}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div className="bg-white rounded-md p-5 text-gray-900 mb-7">
-        <div>
-          <h3 className="font-semibold text-gray-900 mb-1">Demostracao de Resultado</h3>
-          <div>
-            <p className="text-gray-500 text-md mb-7 ">Analise Financeira Detalhada</p>
-          </div>
+      {/* Demonstracao */}
 
-          <div className="bg-green-100 rounded-xl p-4 mb-5">
-            <h2>Receitas de Vendas </h2>
-          </div>
+      <div
+        className="
+bg-white
+rounded-md
+p-5
+mb-7
+"
+      >
+        <h3
+          className="
+font-semibold
+text-xl
+mb-5
+"
+        >
+          Demonstração de Resultado
+        </h3>
 
-          <div className="bg-orange-100 rounded-xl p-4 mb-5">
-            <h2>Custo dos Produtos Vendidos</h2>
-          </div>
+        <div
+          className="
+bg-green-100
+rounded-xl
+p-4
+mb-5
+"
+        >
+          <h2>Receitas de Vendas</h2>
 
-          <div className="bg-green-100 rounded-xl p-4 mb-5">
-            <h2>Lucro Bruto</h2>
-          </div>
+          <p className="font-bold">{receitaTotal.toLocaleString()} MZN</p>
+        </div>
 
-          <div className="bg-red-100 rounded-xl p-4 mb-5">
-            <h2>Despesas Operacionais</h2>
-          </div>
+        <div
+          className="
+bg-orange-100
+rounded-xl
+p-4
+mb-5
+"
+        >
+          <h2>Custo dos Produtos Vendidos</h2>
 
-          <div className="bg-blue-100 rounded-xl p-4 font-bold">
-            <h2>Lucro Liquido</h2>
-          </div>
+          <p className="font-bold">{custoProdutos.toLocaleString()} MZN</p>
+        </div>
+
+        <div
+          className="
+bg-green-100
+rounded-xl
+p-4
+mb-5
+"
+        >
+          <h2>Lucro Bruto</h2>
+
+          <p className="font-bold">{lucroBruto.toLocaleString()} MZN</p>
+        </div>
+
+        <div
+          className="
+bg-blue-100
+rounded-xl
+p-4
+"
+        >
+          <h2>Lucro Líquido</h2>
+
+          <p className="font-bold">{lucroLiquido.toLocaleString()} MZN</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-md p-5">
-        <h2 className="font-semibold text-gray-900 mb-1">Transacoes</h2>
-        <p className="text-gray-500  mb-7 ">Visualizar e gerir todas as transacoes financeiras</p>
+      {/* Tabela */}
 
-        <div  className=" bg-white border-gray-200 overflow-hidden shadow">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Tipo</th>
-                  <th>Categoria</th>
-                  <th>Descricao</th>
-                  <th>Valor</th>
-                  <th>Acoes</th>
+      <div
+        className="
+bg-white
+rounded-md
+p-5
+"
+      >
+        <h2
+          className="
+font-semibold
+text-xl
+mb-5
+"
+        >
+          Transações
+        </h2>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="p-3">Data</th>
+
+                <th>Tipo</th>
+
+                <th>Produto</th>
+
+                <th>Quantidade</th>
+
+                <th>Valor</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {movimentos.map((mov) => (
+                <tr key={mov.id} className="border-b">
+                  <td className="p-3">
+                    {new Date(mov.created_at).toLocaleDateString()}
+                  </td>
+
+                  <td>{mov.tipo}</td>
+
+                  <td>{mov.nomeProduto}</td>
+
+                  <td>{mov.quantidade}</td>
+
+                  <td>
+                    {mov.tipo === "saida"
+                      ? (mov.quantidade * mov.preco).toLocaleString()
+                      : (mov.quantidade * mov.precoFornecedor).toLocaleString()}
+                    MZN
+                  </td>
                 </tr>
-              </thead>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-
-
       </div>
     </div>
   );
