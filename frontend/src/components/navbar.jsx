@@ -17,11 +17,11 @@ function Navbar() {
 
 
   return (
-    <div className="flex-shrink-0 w-64 bg-white shadow-2xl p-4 flex flex-col">
+    <div className="flex-shrink-0 w-64 bg-blue-300 shadow-2 p-4 flex flex-col rounded-r-4xl">
       <h1 className="font-bold text-lg -mb-4 py-2">BusinessPro</h1>
       <h3 className="font-bold text-lg">Vendas</h3>
 
-      <div className="p-3 border-b border-gray-200"></div>
+      <div className="p-3 border-b border-blue-400"></div>
 
       <nav className="py-3">
         {menuItems.map(item => (
@@ -30,8 +30,8 @@ function Navbar() {
             to={item.id === "overview" ? "/" : `/${item.id.toLowerCase()}`}
             className={({ isActive }) =>
               `w-full flex items-center gap-2 px-3 py-3 rounded-md mb-2 transition-colors ${isActive
-                ? "bg-indigo-50 text-indigo-600"
-                : "text-gray-600 hover:bg-gray-50"
+                ? "bg-blue-400 text-blue-600"
+                : "text-gray-700  hover:bg-blue-300"
               }`
             }
           >
