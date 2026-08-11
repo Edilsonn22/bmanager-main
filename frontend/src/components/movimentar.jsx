@@ -9,7 +9,7 @@ function RegistarMovimento() {
   const [quantidade, setQuantidade] = useState("");
   const [tipoMovimento, setTipoMovimento] = useState("");
 
-  const tipos = ["entrada", "saida"];
+  const tipos = ["Entrada", "Saida"];
 
   // Carregar produtos do backend
   useEffect(() => {

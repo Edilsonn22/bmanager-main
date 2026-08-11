@@ -18,7 +18,7 @@ import Financeiro from "./components/financeiro";
 function App() {
   return (
     <BrowserRouter>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden bg-gray-50">
         <Navbar />
 
         <Routes>

@@ -6,7 +6,8 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  AlertTriangle
+  AlertTriangle,
+  ArrowLeftRight
 } from 'lucide-react';
 
 function Dashboard() {
@@ -14,12 +15,13 @@ function Dashboard() {
   const defaultStats = [
     { label: 'Total Produtos', value: '0', icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
     { label: 'Valor do Estoque', value: '0 Mzn', icon: DollarSign, color: 'text-green-500', bg: 'bg-green-50' },
-    { label: 'Entradas', value: '0 unidades', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { label: 'Saida', value: '0 produtos', icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-50' },
+    { label: 'Entradas', value: '0 Unidades', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { label: 'Saida', value: '0 Produtos', icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-50' },
   ];
 
   const [produtos, setProdutos] = useState([]);
   const [lowStockItems, setLowStockItems] = useState([]);
+  const [saidas, setSaidas] = useState([]);
   const [stats, setStats] = useState(defaultStats);
   const [recentMovements, setRecentMovements] = useState([]);
 
@@ -38,10 +40,10 @@ function Dashboard() {
               current: p.quantidade,
               minimum: p.estoqueMinimo
             }));
-
           setLowStockItems(lowStock);
 
           const totalProdutos = data.produtos.length;
+
           const valorEstoque = data.produtos.reduce(
             (acc, p) => acc + Number(p.preco) * Number(p.quantidade),
             0
@@ -108,7 +110,8 @@ function Dashboard() {
           </button>
         </Link>
       </div>
-
+       
+       
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mb-10">
         {stats.map(stat => (
@@ -152,12 +155,15 @@ function Dashboard() {
           ))
         )}
       </div>
-
+        
       {/* Recent Movements */}
       <div className="bg-white p-5 rounded-md">
-        <h3 className="font-semibold text-gray-900 mb-2">
+        <div className='flex items-center gap-2 mb-2'>
+          <ArrowLeftRight className="w-5 h-5 text-yellow-500" />
+        <h3 className="font-semibold text-gray-900 mb-">
           Movimentos de Estoque Recente
         </h3>
+        </div>
 
         {recentMovements.length === 0 ? (
           <p className="text-gray-500 text-sm">Nenhum movimento recente.</p>
@@ -175,9 +181,14 @@ function Dashboard() {
               </div>
               <span className="text-sm text-gray-700">{item.date}</span>
             </div>
+            
+            
           ))
-        )}
+          
+        )} 
+        
       </div>
+     
     </div>
   );
 }
