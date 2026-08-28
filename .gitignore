@@ -1,0 +1,26 @@
+# Segredos e configuracao local
+.env
+.env.*
+!.env.example
+
+# Dependencias
+node_modules/
+
+# Builds e cobertura
+dist/
+build/
+coverage/
+
+# Logs e arquivos temporarios
+*.log
+logs/
+*.tmp
+*.temp
+
+# Ambiente e editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.local
+
