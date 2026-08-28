@@ -1,4 +1,5 @@
 import express from "express";
+
 import {
   createProduto,
   getAllProdutos,
@@ -7,13 +8,54 @@ import {
   deleteProduto
 } from "../controllers/produtoController.js";
 
-const router = express.Router();
+import { auth } from "../middlewares/auth.js";
+import { authorize, authorizeModule } from "../middlewares/authorize.js";
+import { verificarAssinatura } from "../middlewares/verificarAssinatura.js";
 
-// Rotas
-router.post("/", createProduto);
-router.get("/", getAllProdutos);
-router.get("/:id", getProdutoById);
-router.put("/:id", updateProduto);
-router.delete("/:id", deleteProduto);
+const router = express.Router();
+router.use(auth, authorizeModule("estoque"), verificarAssinatura);
+
+
+// ========================================
+// ROTAS DE PRODUTOS
+// ========================================
+
+// Criar produto
+router.post(
+  "/",
+  authorize("admin", "gestor"),
+  createProduto
+);
+
+
+// Listar produtos
+router.get(
+  "/",
+  getAllProdutos
+);
+
+
+// Buscar produto por ID
+router.get(
+  "/:id",
+  getProdutoById
+);
+
+
+// Atualizar produto
+router.put(
+  "/:id",
+  authorize("admin", "gestor"),
+  updateProduto
+);
+
+
+// Excluir produto
+router.delete(
+  "/:id",
+  authorize("admin"),
+  deleteProduto
+);
+
 
 export default router;

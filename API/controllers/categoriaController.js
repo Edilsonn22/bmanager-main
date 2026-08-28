@@ -1,35 +1,65 @@
 import pool from "../config/db.js";
 
-// GET - Listar todas as categorias
+const empresaId = (req) => req.user?.empresa_id;
+
 export const listarCategorias = async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      "SELECT id, nome, descr FROM Categoria"
+    const [categorias] = await pool.query(
+      "SELECT id, nome, descr FROM Categoria WHERE empresa_id = ? ORDER BY nome ASC", [empresaId(req)]
     );
-    res.json({
-      sucesso: true,
-      categorias: rows
-    });
+    return res.json({ sucesso: true, categorias });
   } catch (error) {
-    console.error("Erro ao listar categorias:", error);
-    res.status(500).json({ sucesso: false, erro: error.message });
+    return res.status(500).json({ sucesso: false, erro: "Não foi possível listar categorias." });
   }
 };
 
-// DELETE - Deletar uma categoria
-export const deletarCategoria = async (req, res) => {
-  const { id } = req.params;
+export const obterCategoria = async (req, res) => {
   try {
-    const [result] = await pool.query(
-      "DELETE FROM Categoria WHERE idCategoria = ?",
-      [id]
+    const [categorias] = await pool.query(
+      "SELECT id, nome, descr FROM Categoria WHERE id = ? AND empresa_id = ?",
+      [req.params.id, empresaId(req)]
     );
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ sucesso: false, erro: "Categoria não encontrada" });
-    }
-    res.json({ sucesso: true, mensagem: "Categoria deletada com sucesso" });
+    if (!categorias.length) return res.status(404).json({ sucesso: false, erro: "Categoria não encontrada." });
+    return res.json({ sucesso: true, categoria: categorias[0] });
   } catch (error) {
-    console.error("Erro ao deletar categoria:", error);
-    res.status(500).json({ sucesso: false, erro: error.message });
+    return res.status(500).json({ sucesso: false, erro: "Não foi possível obter a categoria." });
+  }
+};
+
+export const criarCategoria = async (req, res) => {
+  try {
+    const { nome, descr } = req.body;
+    if (!nome?.trim() || !descr?.trim()) return res.status(400).json({ sucesso: false, erro: "Nome e descrição são obrigatórios." });
+    const [result] = await pool.execute(
+      "INSERT INTO Categoria (empresa_id, nome, descr) VALUES (?, ?, ?)", [empresaId(req), nome.trim(), descr.trim()]
+    );
+    return res.status(201).json({ sucesso: true, id: result.insertId });
+  } catch (error) {
+    return res.status(500).json({ sucesso: false, erro: "Não foi possível criar a categoria." });
+  }
+};
+
+export const atualizarCategoria = async (req, res) => {
+  try {
+    const { nome, descr } = req.body;
+    if (!nome?.trim() || !descr?.trim()) return res.status(400).json({ sucesso: false, erro: "Nome e descrição são obrigatórios." });
+    const [result] = await pool.execute(
+      "UPDATE Categoria SET nome = ?, descr = ? WHERE id = ? AND empresa_id = ?",
+      [nome.trim(), descr.trim(), req.params.id, empresaId(req)]
+    );
+    if (!result.affectedRows) return res.status(404).json({ sucesso: false, erro: "Categoria não encontrada." });
+    return res.json({ sucesso: true });
+  } catch (error) {
+    return res.status(500).json({ sucesso: false, erro: "Não foi possível atualizar a categoria." });
+  }
+};
+
+export const deletarCategoria = async (req, res) => {
+  try {
+    const [result] = await pool.execute("DELETE FROM Categoria WHERE id = ? AND empresa_id = ?", [req.params.id, empresaId(req)]);
+    if (!result.affectedRows) return res.status(404).json({ sucesso: false, erro: "Categoria não encontrada." });
+    return res.json({ sucesso: true, mensagem: "Categoria removida com sucesso." });
+  } catch (error) {
+    return res.status(409).json({ sucesso: false, erro: "Não é possível remover uma categoria que possui produtos." });
   }
 };

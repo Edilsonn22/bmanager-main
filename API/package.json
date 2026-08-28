@@ -5,15 +5,28 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node scripts/migrarBanco.js up",
+    "migrate:status": "node scripts/migrarBanco.js status",
+    "migrate:baseline": "node scripts/migrarBanco.js baseline",
+    "criar-dono": "node scripts/criarAdministradorPlataforma.js",
+    "processar-assinaturas": "node scripts/processarAssinaturas.js",
+    "check:encoding": "node scripts/verificarCodificacao.js",
+    "test:webhook-debito": "node scripts/testarWebhookDebito.js",
+    "test": "node --test",
+    "test:integration": "node scripts/runIntegrationTests.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "mysql2": "^3.18.0",
-    "sequelize": "^6.37.7"
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.18.0"
   }
 }
