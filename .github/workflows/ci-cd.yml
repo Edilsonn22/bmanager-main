@@ -1,0 +1,75 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  api:
+    name: API - testes
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    defaults:
+      run:
+        working-directory: API
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: API/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run check:encoding
+      - run: npm test
+      - run: npm run test:integration
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: root
+          TEST_DB_NAME: bmanager_test
+          JWT_SECRET: segredo-ci-nao-usar-em-producao
+          JWT_EXPIRES: 1h
+          PAYSUITE_WEBHOOK_SECRET: webhook-ci
+
+  frontend:
+    name: Frontend - build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run lint
+      - run: npm run build
+
+  publicar:
+    name: Publicar
+    needs: [api, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.DEPLOY_WEBHOOK_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acionar publicação aprovada
+        run: curl --fail --show-error --silent -X POST "$DEPLOY_WEBHOOK_URL"
+        env:
+          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
