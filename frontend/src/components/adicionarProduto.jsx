@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../api/authenticatedFetch";
 
 function AdicionarProduto() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ function AdicionarProduto() {
 
 
 useEffect(() => {
-    fetch("http://localhost:3000/api/categorias")
+    fetch(`${API_URL}/categorias`)
       .then((res) => res.json())
       .then((data) => {
         if (data.sucesso) {
@@ -31,7 +32,7 @@ useEffect(() => {
 
  
   useEffect(() => {
-    fetch("http://localhost:3000/api/fornecedores")
+    fetch(`${API_URL}/fornecedores`)
       .then((res) => res.json())
       .then((data) => {
         if (data.sucesso) {
@@ -82,12 +83,9 @@ useEffect(() => {
   quantidade: parseInt(quantidade),
 };
 
-    console.log("Enviando dados:", dados);
-
-
     try {
       const response = await fetch(
-        "http://localhost:3000/api/produtos",
+        `${API_URL}/produtos`,
         {
           method: "POST",
           headers: {
@@ -98,8 +96,6 @@ useEffect(() => {
       );
 
       const result = await response.json();
-      console.log("Resposta do servidor:", result);
-
       if (result.sucesso) {
         setMensagem("✓ Produto adicionado com sucesso!");
 

@@ -1,14 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { Plus, Search, Edit2, Trash2, X } from "lucide-react";
+import { useAuth } from "../features/auth/AuthContext";
+import { API_URL } from "../api/authenticatedFetch";
 
 function Productos() {
+  const { usuario } = useAuth();
+  const podeGerir = ["admin", "gestor"].includes(usuario?.role);
+  const podeVerPrecoFornecedor = ["admin", "gestor"].includes(usuario?.role);
+  const podeVerAcoes = ["admin", "gestor"].includes(usuario?.role);
+  const podeExcluir = usuario?.role === "admin";
   const [produtos, setProdutos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [fornecedores, setFornecedores] = useState([]);
   const [pesquisa, setPesquisa] = useState("");
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState("");
+
+
+
+   const formatarMzn = (valor) => {
+    return `${Number(valor || 0).toLocaleString("pt-MZ")}`;
+  };
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/produtos")
+    fetch(`${API_URL}/produtos`)
       .then((res) => res.json())
       .then((data) => {
         if (data.sucesso) setProdutos(data.produtos);
@@ -17,7 +32,7 @@ function Productos() {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/categorias")
+    fetch(`${API_URL}/categorias`)
       .then((res) => res.json())
       .then((data) => {
         if (data.sucesso) setCategorias(data.categorias);
@@ -26,7 +41,7 @@ function Productos() {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/fornecedores")
+    fetch(`${API_URL}/fornecedores`)
       .then((res) => res.json())
       .then((data) => {
         if (data.sucesso) setFornecedores(data.fornecedores);
@@ -38,7 +53,7 @@ function Productos() {
     if (window.confirm("Tem certeza que deseja excluir este produto?")) {
       setProdutos(produtos.filter((p) => Number(p.id) !== Number(id)));
 
-      fetch(`http://localhost:3000/api/produtos/${id}`, {
+      fetch(`${API_URL}/produtos/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -66,9 +81,17 @@ function Productos() {
     else return { text: "Bom", class: "bg-green-100 text-green-700" };
   };
 
-  const produtosFiltrados = produtos.filter((p) =>
-    p.nome.toLowerCase().includes(pesquisa.toLowerCase()),
-  );
+  const produtosFiltrados = produtos.filter((p) => {
+    const correspondeNome = p.nome
+      .toLowerCase()
+      .includes(pesquisa.toLowerCase());
+
+    const correspondeCategoria =
+      categoriaSelecionada === "" ||
+      Number(p.idCategoria) === Number(categoriaSelecionada);
+
+    return correspondeNome && correspondeCategoria;
+  });
 
   return (
     <div className="flex-1 h-screen overflow-auto bg-gray-50 p-7 py-6">
@@ -80,36 +103,84 @@ function Productos() {
           </p>
         </div>
 
-        <Link to="/adicionarProduto">
-          <button className="bg-indigo-600 text-white px-2 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Adicionar
-          </button>
-        </Link>
+        {podeGerir && (
+          <Link to="/adicionarProduto">
+            <button className="bg-indigo-600 text-white px-2 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Adicionar
+            </button>
+          </Link>
+        )}
       </div>
 
       {/* Pesquisa */}
-      <div className="relative mb-5">
-        <input
-          type="text"
-          placeholder="Pesquisar produto..."
-          value={pesquisa}
-          onChange={(e) => setPesquisa(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-        />
+      <div className="mb-5 flex flex-col gap-3 md:flex-row">
+        {/* Pesquisa por nome */}
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Pesquisar produto..."
+            value={pesquisa}
+            onChange={(e) => setPesquisa(e.target.value)}
+            className="
+        w-full
+        rounded-lg
+        border
+        border-gray-300
+        py-2
+        pl-4
+        pr-4
+        outline-none
+        focus:border-transparent
+        focus:ring-2
+        focus:ring-indigo-500
+      "
+          />
+        </div>
+
+        {/* Pesquisa por categoria */}
+        <div className="w-full md:w-64">
+          <select
+            value={categoriaSelecionada}
+            onChange={(e) => setCategoriaSelecionada(e.target.value)}
+            className="
+        w-full
+        rounded-lg
+        border
+        border-gray-300
+        bg-white
+        px-4
+        py-2
+        text-gray-700
+        outline-none
+        focus:border-transparent
+        focus:ring-2
+        focus:ring-indigo-500
+      "
+          >
+            <option value="" className="text-gray-500">Todas as categorias</option>
+
+            {categorias.map((categoria) => (
+              <option key={categoria.id} value={categoria.id}>
+                {categoria.nome}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
+      <div></div>
 
       {/* Tabela */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
@@ -132,15 +203,19 @@ function Productos() {
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
-                  Preço Fornecedor
-                </th>
+                {podeVerPrecoFornecedor && (
+                  <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
+                    Preço Fornecedor
+                  </th>
+                )}
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
                   Preço
                 </th>
-                <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
-                  Ações
-                </th>
+                {podeVerAcoes && (
+                  <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
+                    Ações
+                  </th>
+                )}
               </tr>
             </thead>
 
@@ -156,13 +231,13 @@ function Productos() {
 
                 return (
                   <tr key={produto.id}>
-                    <td className="px-6 py-3">{produto.nome}</td>
+                    <td className="px- py-3">{produto.nome}</td>
 
                     <td className="px-6 py-3">
                       {categoria ? categoria.nome : "Sem categoria"}
                     </td>
 
-                    <td className="px-6 py-3">
+                    <td className="px- py-3">
                       {fornecedor ? fornecedor.nome : "Sem fornecedor"}
                     </td>
 
@@ -175,24 +250,31 @@ function Productos() {
                         {GetStatus(produto.quantidade).text}
                       </span>
                     </td>
+                    {podeVerPrecoFornecedor && (
+                      <td className="px-6 py-3">
+                        {formatarMzn(produto.precoFornecedor)}
+                      </td>
+                    )}
 
-                    <td className="px-6 py-3">{produto.precoFornecedor}</td>
+                    <td className="px-6 py-3">{formatarMzn(produto.preco)}</td>
 
-                    <td className="px-6 py-3">{produto.preco}</td>
+                    <td className="px-6 py-3 text-center flex justify-center">
+                      {podeGerir && (
+                        <Link to={`/editarProduto/${produto.id}`}>
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition">
+                            <Edit2 className="w-4 h-4 text-gray-600" />
+                          </button>
+                        </Link>
+                      )}
 
-                    <td className="px-6 py-3 text-center">
-                      <Link to={`/editarProduto/${produto.id}`}>
-                        <button className="px-2 py-1 inline-flex text-xs font-semibold rounded-lg bg-blue-500 text-white hover:bg-blue-700">
-                          Editar
+                      {podeExcluir && (
+                        <button
+                          onClick={() => handleDelete(produto.id)}
+                          className="p-2 hover:bg-red-50 rounded-lg transition"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
                         </button>
-                      </Link>
-
-                      <button
-                        onClick={() => handleDelete(produto.id)}
-                        className="px-2 mx-2 py-1 inline-flex text-xs font-semibold text-white hover:bg-red-700 rounded-lg bg-red-500"
-                      >
-                        Excluir
-                      </button>
+                      )}
                     </td>
                   </tr>
                 );

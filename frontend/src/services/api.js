@@ -1,28 +1,20 @@
 
 
+import { API_URL } from "../api/authenticatedFetch.js";
+
 export async function deletarProduto(id) {
-    const response = await fetch(
-        "http://localhost/bmanager/backend/produto/deletar.php",
-        {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id }),
-        }
-    );
-    return await response.json();
+    const response = await fetch(`${API_URL}/produtos/${id}`, { method: "DELETE" });
+    return response.json();
 }
 
 export async function atualizarProduto(id, dados) {
 
-    const response = await fetch(
-      "http://localhost/bmanager/backend/produto/editar.php",
-      {
-        method: "POST",
+    const response = await fetch(`${API_URL}/produtos/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({id, ...dados}),
-      }
-    );
-    return await response.json();
+        body: JSON.stringify(dados),
+    });
+    return response.json();
 }
 
 

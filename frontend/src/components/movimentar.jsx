@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../api/authenticatedFetch";
 
 function RegistarMovimento() {
   const navigate = useNavigate();
@@ -10,10 +11,11 @@ function RegistarMovimento() {
   const [tipoMovimento, setTipoMovimento] = useState("");
 
   const tipos = ["Entrada", "Saida"];
+  const [mensagem, setMensagem] = useState("");
 
   // Carregar produtos do backend
   useEffect(() => {
-    fetch("http://localhost:3000/api/produtos")
+    fetch(`${API_URL}/produtos`)
       .then((res) => res.json())
       .then((data) => {
         if (data.sucesso) {
@@ -55,7 +57,7 @@ function RegistarMovimento() {
     }
 
     try {
-      const resposta = await fetch("http://localhost:3000/api/movimentos", {
+      const resposta = await fetch(`${API_URL}/movimentos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,8 +70,15 @@ function RegistarMovimento() {
       const data = await resposta.json();
 
       if (data.sucesso) {
-        alert(`${tipoMovimento} registrada com sucesso!`);
-        navigate(-1);
+        setMensagem(`✓ ${tipoMovimento} registrada com sucesso!`);
+
+        setProdutoSelecionado("");
+        setQuantidade("");
+        setTipoMovimento("");
+        
+        setTimeout(() => {
+          navigate(-1);
+        }, 1500);
       } else {
         alert("Erro ao registrar movimento: " + (data.erro || "Erro desconhecido"));
       }
@@ -140,7 +149,18 @@ function RegistarMovimento() {
               />
             </div>
           </div>
-
+            {mensagem && (
+            <p
+              className={`mt-4 font-medium ${
+                mensagem.includes("sucesso") || mensagem.includes("✓")
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              {mensagem}
+            </p>
+          )}
+          
           {/* Botões */}
           <div className="flex gap-3 mt-6">
             <button

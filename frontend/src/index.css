@@ -1,5 +1,52 @@
 @import "tailwindcss";
 
+@keyframes landing-enter { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes landing-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes landing-orb { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(24px, 18px, 0) scale(1.08); } }
+@keyframes landing-shine { from { transform: translateX(-140%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
+@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(15deg); } 75% { transform: rotate(-8deg); } }
+.landing-page { isolation: isolate; position: relative; }
+.landing-grid { background-image: linear-gradient(rgb(99 102 241 / 0.055) 1px, transparent 1px), linear-gradient(90deg, rgb(99 102 241 / 0.055) 1px, transparent 1px); background-size: 64px 64px; mask-image: linear-gradient(to bottom, black, transparent 70%); }
+.landing-orb { position: absolute; z-index: 0; border-radius: 9999px; filter: blur(80px); pointer-events: none; animation: landing-orb 10s ease-in-out infinite; }
+.landing-orb-one { top: 1rem; left: 7%; width: 24rem; height: 24rem; background: rgb(196 181 253 / 0.42); }
+.landing-orb-two { top: 17rem; right: 3%; width: 28rem; height: 28rem; background: rgb(186 230 253 / 0.46); animation-delay: -5s; }
+.landing-enter { animation: landing-enter 700ms cubic-bezier(.2,.7,.2,1) both; }
+.landing-delay { animation-delay: 150ms; }
+.landing-float { animation: landing-float 4s ease-in-out infinite; }
+.landing-gradient-text { background: linear-gradient(110deg, #7c3aed, #4f46e5 52%, #0284c7); background-clip: text; -webkit-background-clip: text; color: transparent; }
+.landing-feature, .landing-dashboard { will-change: transform; }
+.landing-page { scroll-behavior: smooth; }
+.landing-reveal { opacity: 0; transform: translateY(28px); transition: opacity 700ms ease, transform 700ms cubic-bezier(.2,.7,.2,1); }
+.landing-reveal.is-visible { opacity: 1; transform: translateY(0); }
+.landing-feature:nth-child(2) { transition-delay: 100ms; }
+.landing-feature:nth-child(3) { transition-delay: 200ms; }
+.landing-dashboard::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 20%; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .45), transparent); pointer-events: none; animation: landing-shine 7s ease-in-out infinite 1.2s; }
+@media (max-width: 639px) {
+  .landing-orb { filter: blur(60px); }
+  .landing-orb-one { left: -9rem; width: 20rem; height: 20rem; }
+  .landing-orb-two { right: -11rem; width: 23rem; height: 23rem; }
+  .landing-grid { background-size: 42px 42px; }
+}
+.landing-logo { display: block; aspect-ratio: 3 / 1; }
+@media (max-width: 479px) {
+  .landing-title { overflow-wrap: anywhere; }
+  .landing-eyebrow { width: 100%; justify-content: center; border-radius: 1rem; }
+  .landing-actions > * { width: 100%; }
+  .landing-feature { text-align: left; }
+}
+@media (max-width: 359px) {
+  .landing-nav { gap: .5rem; padding-left: .75rem; padding-right: .75rem; }
+  .landing-nav .landing-logo { width: 5rem; }
+  .landing-nav-actions { gap: .5rem; }
+  .landing-login-link { display: none; }
+  .landing-eyebrow { font-size: .65rem; line-height: 1rem; }
+}
+@media (min-width: 1536px) and (min-height: 850px) {
+  .landing-hero { min-height: 42rem; }
+  .landing-dashboard { transform: scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) { .landing-page, .landing-page *, .landing-orb { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } .landing-reveal { opacity: 1; transform: none; transition: none; } }
+
 @layer base {
 * {
     margin: 0;
@@ -27,4 +74,77 @@ body {
 
 
 
+}
+
+/* Padrão visual das tabelas da área autenticada */
+.vendai-app table {
+  width: 100%;
+  min-width: 42rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: #334155;
+  font-size: 0.875rem;
+}
+
+.vendai-app table thead {
+  background: #f8fafc;
+}
+
+.vendai-app table thead th {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.875rem 1.5rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.vendai-app table tbody td {
+  padding: 0.875rem 1.5rem;
+  color: #475569;
+  vertical-align: middle;
+}
+
+.vendai-app table tbody tr:not(:first-child) td {
+  border-top: 1px solid #e2e8f0;
+}
+
+.vendai-app table tbody tr {
+  background: #fff;
+  transition: background-color 160ms ease;
+}
+
+.vendai-app table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.vendai-app table tbody td:first-child {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.vendai-app table button,
+.vendai-app table a {
+  transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.vendai-app table button:active,
+.vendai-app table a:active {
+  transform: scale(0.96);
+}
+
+@media (max-width: 639px) {
+  .vendai-app table {
+    min-width: 38rem;
+    font-size: 0.8125rem;
+  }
+
+  .vendai-app table thead th,
+  .vendai-app table tbody td {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }

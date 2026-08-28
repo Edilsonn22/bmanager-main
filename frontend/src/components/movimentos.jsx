@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_URL } from "../api/authenticatedFetch";
 
 function Movimentos() {
   const [movimentos, setMovimentos] = useState([]);
@@ -7,7 +8,7 @@ function Movimentos() {
   useEffect(() => {
     const fetchMovimentos = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/movimentos");
+        const res = await fetch(`${API_URL}/movimentos`);
         const data = await res.json();
         if (data.sucesso) setMovimentos(data.movimentos);
       } catch (error) {

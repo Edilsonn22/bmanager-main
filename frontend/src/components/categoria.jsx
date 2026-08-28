@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { Plus, Search, Edit2, Trash2, X } from "lucide-react";
+import { useAuth } from "../features/auth/AuthContext";
+import { API_URL } from "../api/authenticatedFetch";
 
 function Categoria() {
+  const { usuario } = useAuth();
+  const podeGerir = ["admin", "gestor"].includes(usuario?.role);
+  const podeExcluir = usuario?.role === "admin";
   const [categorias, setCategorias] = useState([]);
   const [pesquisa, setPesquisa] = useState("");
 
   // Buscar categorias do backend
   useEffect(() => {
-    fetch("http://localhost:3000/api/categorias")
+    fetch(`${API_URL}/categorias`)
       .then((res) => res.json())
       .then((data) => {
         if (data.sucesso) setCategorias(data.categorias);
@@ -21,7 +27,7 @@ function Categoria() {
     if (!window.confirm("Tem certeza que deseja excluir esta categoria?")) return;
 
     try {
-      const res = await fetch(`http://localhost:3000/api/categorias/${id}`, {
+      const res = await fetch(`${API_URL}/categorias/${id}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -47,26 +53,30 @@ function Categoria() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Categorias</h1>
-          <p className="text-gray-600 mb-">Gerencie as categorias do seu negócio</p>
+          <p className="text-gray-600 mb-">
+            Gerencie as categorias do seu negócio
+          </p>
         </div>
-        <Link to="/adicionarCategoria">
-          <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Adicionar
-          </button>
-        </Link>
+        {podeGerir && (
+          <Link to="/adicionarCategoria">
+            <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Adicionar
+            </button>
+          </Link>
+        )}
       </div>
 
       {/* Pesquisa */}
@@ -100,9 +110,17 @@ function Categoria() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-center text-xs text-black-500 uppercase tracking-wider">Nome</th>
-                <th className="px-6 py-3 text-center text-xs text-black-500 uppercase tracking-wider">Descrição</th>
-                <th className="px-6 py-3 text-center text-xs text-black-500 uppercase tracking-wider">Ações</th>
+                <th className="px-6 py-3 text-center text-xs text-black-500 uppercase tracking-wider">
+                  Nome
+                </th>
+                <th className="px-6 py-3 text-center text-xs text-black-500 uppercase tracking-wider">
+                  Descrição
+                </th>
+                {podeGerir && (
+                  <th className="px-6 py-3 text-center text-xs text-black-500 uppercase tracking-wider">
+                    Ações
+                  </th>
+                )}
               </tr>
             </thead>
 
@@ -112,18 +130,22 @@ function Categoria() {
                   <td className="px-6 py-3">{categoria.nome}</td>
                   <td className="px-6 py-3">{categoria.descr}</td>
                   <td className="px-6 py-3 text-center">
-                    <Link to={`/editarCategoria/${categoria.id}`}>
-                      <button className="px-2 py-1 inline-flex text-xs font-semibold rounded-lg bg-blue-500 text-white hover:bg-blue-700">
-                        Editar
-                      </button>
-                    </Link>
 
-                    <button
-                      onClick={() => handleDelete(categoria.id)}
-                      className="px-2 mx-2 py-1 inline-flex text-xs font-semibold text-white hover:bg-red-700 rounded-lg bg-red-500"
-                    >
-                      Excluir
-                    </button>
+                    {podeGerir && (
+                      <Link to={`/editarCategoria/${categoria.id}`}>
+                        <button className="p-2 hover:bg-gray-100 rounded-lg transition">
+                          <Edit2 className="w-4 h-4 text-gray-600" />
+                        </button>
+                      </Link>
+                    )}
+                    {podeExcluir && (
+                      <button
+                        onClick={() => handleDelete(categoria.id)}
+                        className="p-2 hover:bg-red-50 rounded-lg transition"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
