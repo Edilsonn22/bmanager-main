@@ -14,7 +14,7 @@ async function relacoesPertencemAEmpresa(empresaId, idCategoria, idFornecedor) {
 
 export const createProduto = async (req, res) => {
   try {
-    const { nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade } = req.body;
+    const { nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade, codigo_barras = null } = req.body;
     const empresaId = empresaDoPedido(req);
     if (!nome || !idCategoria || precoFornecedor === undefined || preco === undefined || !idFornecedor || quantidade === undefined) {
       return res.status(400).json({ sucesso: false, erro: "Todos os campos são obrigatórios." });
@@ -29,8 +29,8 @@ export const createProduto = async (req, res) => {
       return res.status(400).json({ sucesso: false, erro: "A categoria ou o fornecedor não pertence à sua empresa." });
     }
     const [result] = await pool.execute(
-      "INSERT INTO Produto (empresa_id, nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [empresaId, nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade]
+      "INSERT INTO Produto (empresa_id, nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade, codigo_barras) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [empresaId, nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade, codigo_barras?.trim() || null]
     );
     await auditar({ empresaId, usuarioId: req.user.id, acao: "criar", entidade: "produto", entidadeId: result.insertId, detalhes: { nome } });
     return res.status(201).json({ sucesso: true, id: result.insertId });
@@ -60,7 +60,7 @@ export const getProdutoById = async (req, res) => {
 
 export const updateProduto = async (req, res) => {
   try {
-    const { nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade } = req.body;
+    const { nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade, codigo_barras = null } = req.body;
     const empresaId = empresaDoPedido(req);
     if (!nome?.trim() || !idCategoria || !idFornecedor || !Number.isFinite(Number(precoFornecedor)) || Number(precoFornecedor) <= 0 || !Number.isFinite(Number(preco)) || Number(preco) <= 0 || !Number.isInteger(Number(quantidade)) || Number(quantidade) < 0) {
       return res.status(400).json({ sucesso: false, erro: "Preencha todos os campos com valores válidos." });
@@ -69,8 +69,8 @@ export const updateProduto = async (req, res) => {
       return res.status(400).json({ sucesso: false, erro: "A categoria ou o fornecedor não pertence à sua empresa." });
     }
     const [result] = await pool.execute(
-      "UPDATE Produto SET nome = ?, idCategoria = ?, precoFornecedor = ?, preco = ?, idFornecedor = ?, quantidade = ? WHERE id = ? AND empresa_id = ?",
-      [nome.trim(), idCategoria, Number(precoFornecedor), Number(preco), idFornecedor, Number(quantidade), req.params.id, empresaId]
+      "UPDATE Produto SET nome = ?, idCategoria = ?, precoFornecedor = ?, preco = ?, idFornecedor = ?, quantidade = ?, codigo_barras = ? WHERE id = ? AND empresa_id = ?",
+      [nome.trim(), idCategoria, Number(precoFornecedor), Number(preco), idFornecedor, Number(quantidade), codigo_barras?.trim() || null, req.params.id, empresaId]
     );
     if (!result.affectedRows) return res.status(404).json({ sucesso: false, erro: "Produto não encontrado." });
     await auditar({ empresaId, usuarioId: req.user.id, acao: "atualizar", entidade: "produto", entidadeId: req.params.id, detalhes: { nome } });

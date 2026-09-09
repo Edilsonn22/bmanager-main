@@ -1,0 +1,2 @@
+ALTER TABLE Venda
+  ADD COLUMN cliente_nome VARCHAR(255) DEFAULT NULL AFTER cliente_id;

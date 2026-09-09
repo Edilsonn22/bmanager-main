@@ -473,7 +473,7 @@ function Relatorios() {
 
       const quantidade = Number(movimento.quantidade || 0);
 
-      const preco = Number(produto?.preco || 0);
+      const preco = Number(movimento.preco_unitario ?? produto?.preco ?? 0);
 
       const valor = quantidade * preco;
 
@@ -540,7 +540,7 @@ function Relatorios() {
 
       const quantidade = Number(movimento.quantidade || 0);
 
-      const preco = Number(produto.preco || 0);
+      const preco = Number(movimento.preco_unitario ?? produto.preco ?? 0);
 
       receitaTotal += preco * quantidade;
 
@@ -613,9 +613,9 @@ function Relatorios() {
 
       const quantidade = Number(movimento.quantidade || 0);
 
-      receitaTotal += Number(produto.preco || 0) * quantidade;
+      receitaTotal += Number(movimento.preco_unitario ?? produto.preco ?? 0) * quantidade;
 
-      custoTotal += Number(produto.precoFornecedor || 0) * quantidade;
+      custoTotal += Number(movimento.custo_unitario ?? produto.precoFornecedor ?? 0) * quantidade;
     });
 
     const lucroBruto = receitaTotal - custoTotal;
@@ -676,7 +676,7 @@ function Relatorios() {
           bg: "bg-blue-50",
         },
         {
-          label: "Ticket Médio",
+          label: "Média por venda",
           value: formatarMzn(statsVendas.ticketMedio),
           icon: DollarSign,
           color: "text-orange-500",
@@ -923,14 +923,14 @@ function Relatorios() {
   const exportarExcel = async () => {
     try {
       if (dadosExportacao.length === 0) {
-        alert("Não existem dados para exportar.");
+        setErro("Não existem dados para exportar com os filtros selecionados.");
         return;
       }
 
       const { totalProdutos, totalUnidades } = getResumoExportacao();
 
       const linhas = [
-        ["BUSINESSPRO"],
+        ["VENDAI"],
         [getTituloRelatorio()],
         [],
         ["Período:", `${periodoInicio} → ${periodoFim}`],
@@ -966,7 +966,7 @@ function Relatorios() {
     } catch (error) {
       console.error("Erro ao exportar Excel:", error);
 
-      alert("Erro ao exportar o relatório para Excel.");
+      setErro("Não foi possível exportar o relatório para Excel.");
     }
   };
 
@@ -977,7 +977,7 @@ function Relatorios() {
   const exportarPDF = () => {
     try {
       if (dadosExportacao.length === 0) {
-        alert("Não existem dados para exportar.");
+        setErro("Não existem dados para exportar com os filtros selecionados.");
         return;
       }
 
@@ -997,7 +997,7 @@ function Relatorios() {
 
       doc.setFontSize(18);
 
-      doc.text("BUSINESSPRO", 105, 18, {
+      doc.text("VENDAI", 105, 18, {
         align: "center",
       });
 
@@ -1175,7 +1175,7 @@ function Relatorios() {
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
 
-      alert("Erro ao exportar o relatório para PDF.");
+      setErro("Não foi possível exportar o relatório para PDF.");
     }
   };
 
@@ -1706,10 +1706,9 @@ function TabelaMovimentos({
 
             const quantidade = Number(movimento.quantidade || 0);
 
-            const preco =
-              movimento.tipo === "saida"
-                ? Number(produto?.preco || 0)
-                : Number(produto?.precoFornecedor || 0);
+            const preco = movimento.tipo === "saida"
+              ? Number(movimento.preco_unitario ?? produto?.preco ?? 0)
+              : Number(movimento.custo_unitario ?? produto?.precoFornecedor ?? 0);
 
             const categoria = getCategoriaMovimento(movimento);
 

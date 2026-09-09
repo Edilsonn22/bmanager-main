@@ -61,14 +61,19 @@ body {
     color: black;
   }
 
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgb(99 102 241 / .35);
+  outline-offset: 2px;
+}
+
   /* index.css */
 
 .main-content {
   flex: 1;
   overflow: auto;
-  padding: 7;
-  padding-block: 6;
-  background-color :gray 50;
+  padding: 1.5rem;
+  background-color: #f8fafc;
   
 }
 
@@ -137,8 +142,13 @@ body {
 }
 
 @media (max-width: 639px) {
+  .vendai-app > main,
+  .vendai-app > div:not([role="dialog"]) {
+    min-width: 0;
+  }
+
   .vendai-app table {
-    min-width: 38rem;
+    min-width: 34rem;
     font-size: 0.8125rem;
   }
 
@@ -147,4 +157,78 @@ body {
     padding-left: 1rem;
     padding-right: 1rem;
   }
+}
+
+@media (max-width: 767px) {
+  .vendai-app > main,
+  .vendai-app > div:not([role="dialog"]) {
+    padding-top: 4.75rem;
+  }
+}
+
+.commerce-page { background: #f9fafb; }
+.commerce-header h1 { color: #111827; font-size: 1.5rem; line-height: 2rem; font-weight: 700; letter-spacing: 0; }
+.commerce-header p { margin-top: 0; max-width: 42rem; }
+.commerce-header > p:first-child,
+.commerce-header > div > p:first-child { display: none; }
+.commerce-panel { border: 1px solid #e5e7eb; border-radius: 1rem; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .05); backdrop-filter: none; }
+.commerce-page input, .commerce-page select { min-height: 2.5rem; transition: border-color 160ms ease, box-shadow 160ms ease; }
+.commerce-page input:focus, .commerce-page select:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgb(99 102 241 / .12); outline: none; }
+.commerce-page button, .commerce-page a { transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease; }
+.commerce-page button:active, .commerce-page a:active { transform: none; }
+.commerce-page .commerce-panel > div:first-child { background-color: #fff; background-image: none; color: #111827; }
+.commerce-page .commerce-panel > div:first-child p { color: #6b7280; }
+.commerce-page .commerce-panel > div:first-child > div > span { background: #eef2ff; color: #4f46e5; }
+.commerce-page .backdrop-blur-sm { backdrop-filter: none; }
+@media (max-width: 639px) { .commerce-header { align-items: stretch; } .commerce-header > a, .commerce-header > button { width: 100%; justify-content: center; text-align: center; } }
+@page { size: A4 portrait; margin: 12mm; }
+@page receipt-thermal { size: 80mm auto; margin: 4mm; }
+
+@media print {
+  html, body, #root, .vendai-app { min-height: 0 !important; height: auto !important; background: #fff !important; }
+  body { color: #000 !important; font-family: Arial, Helvetica, sans-serif !important; print-color-adjust: economy; -webkit-print-color-adjust: economy; }
+  .vendai-app aside, .print\:hidden { display: none !important; }
+  .commerce-page, .vendai-app > main { height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; padding: 0 !important; }
+  .commerce-panel { border: 0 !important; box-shadow: none !important; }
+  .receipt-print { width: 100% !important; max-width: none !important; overflow: visible !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: #fff !important; color: #000 !important; }
+  .receipt-print * { box-shadow: none !important; text-shadow: none !important; }
+  .receipt-header { padding: 0 0 6mm !important; background: #fff !important; border-color: #999 !important; }
+  .receipt-company { color: #000 !important; font-size: 16pt !important; }
+  .receipt-company-details, .receipt-header p { color: #333 !important; }
+  .receipt-status { color: #000 !important; background: #fff !important; border: 1px solid #777 !important; }
+  .receipt-print > div { padding-left: 0 !important; padding-right: 0 !important; }
+  .receipt-print > div:nth-of-type(1) > div { background: #fff !important; border: 1px solid #bbb !important; break-inside: avoid; }
+  .receipt-print .hidden:has(> table) { display: block !important; overflow: visible !important; border-color: #999 !important; }
+  .receipt-print .md\:hidden { display: none !important; }
+  .receipt-print table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
+  .receipt-print thead { display: table-header-group; }
+  .receipt-print tfoot { display: table-footer-group; }
+  .receipt-print tr { break-inside: avoid; page-break-inside: avoid; }
+  .receipt-print th { background: #eee !important; color: #000 !important; }
+  .receipt-print th, .receipt-print td { border-bottom: 1px solid #bbb !important; padding: 2.5mm 2mm !important; font-size: 9.5pt !important; overflow-wrap: anywhere; }
+  .receipt-print button { display: none !important; }
+  .receipt-print .ml-auto.mt-6 { break-inside: avoid; background: #fff !important; border-color: #999 !important; }
+  .receipt-footer { display: block !important; break-inside: avoid; color: #333 !important; }
+
+  .receipt-print--thermal {
+    page: receipt-thermal;
+    width: 72mm !important;
+    font-size: 9pt !important;
+  }
+  .receipt-print--thermal .receipt-header { padding-bottom: 3mm !important; text-align: center; }
+  .receipt-print--thermal .receipt-header > div { display: block !important; }
+  .receipt-print--thermal .receipt-status { margin: 2mm auto 0 !important; }
+  .receipt-print--thermal .receipt-company { font-size: 13pt !important; }
+  .receipt-print--thermal .receipt-company-details { font-size: 8pt !important; }
+  .receipt-print--thermal > div:nth-of-type(1) { display: block !important; padding: 3mm 0 !important; }
+  .receipt-print--thermal > div:nth-of-type(1) > div { margin-bottom: 1.5mm; padding: 2mm !important; }
+  .receipt-print--thermal > div:nth-of-type(2) { padding: 3mm 0 0 !important; }
+  .receipt-print--thermal > div:nth-of-type(2) > div:first-child { margin-bottom: 2mm !important; }
+  .receipt-print--thermal th, .receipt-print--thermal td { padding: 1.5mm .75mm !important; font-size: 7.5pt !important; }
+  .receipt-print--thermal th:nth-child(3), .receipt-print--thermal td:nth-child(3) { display: none; }
+  .receipt-print--thermal th:first-child { width: 43% !important; }
+  .receipt-print--thermal th:nth-child(2) { width: 14% !important; }
+  .receipt-print--thermal th:nth-child(4) { width: 43% !important; }
+  .receipt-print--thermal .ml-auto.mt-6 { max-width: none !important; margin-top: 3mm !important; padding: 3mm 0 !important; border-width: 1px 0 0 !important; border-radius: 0 !important; }
+  .receipt-print--thermal .receipt-footer { padding: 3mm 0 0 !important; }
 }

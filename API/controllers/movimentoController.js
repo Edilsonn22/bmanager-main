@@ -15,7 +15,8 @@ export const createMovimento = async (req, res) => {
     const {
       id_Produto,
       tipo,
-      quantidade
+      quantidade,
+      motivo
     } = req.body;
 
 
@@ -87,7 +88,9 @@ export const createMovimento = async (req, res) => {
         id,
         nome,
         quantidade,
-        estoque_minimo
+        estoque_minimo,
+        preco,
+        precoFornecedor
       FROM Produto
       WHERE id = ?
       AND empresa_id = ?
@@ -174,15 +177,22 @@ export const createMovimento = async (req, res) => {
         id_Produto,
         empresa_id,
         tipo,
-        quantidade
+        quantidade,
+        preco_unitario,
+        custo_unitario,
+        origem,
+        motivo
       )
-      VALUES (?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, 'manual', ?)
       `,
       [
         id_Produto,
         empresa_id,
         tipo,
-        qtd
+        qtd,
+        produto.preco,
+        produto.precoFornecedor,
+        tipo === "saida" ? (motivo?.trim() || "Saída manual") : (motivo?.trim() || "Entrada manual")
       ]
     );
 
@@ -280,10 +290,14 @@ export const getAllMovimentos = async (req, res) => {
         m.id_Produto AS produtoId,
         m.tipo,
         m.quantidade,
+        m.preco_unitario,
+        m.custo_unitario,
+        m.origem,
+        m.motivo,
+        m.venda_id,
         m.created_at,
 
-        p.nome AS nomeProduto,
-        p.preco
+        p.nome AS nomeProduto
 
       FROM Movimentos m
 

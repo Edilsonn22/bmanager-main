@@ -36,7 +36,14 @@ export const resumoFinanceiro = async (req, res) => {
         m.id,
         m.id_Produto AS produtoId,
         m.tipo,
-        m.quantidade,
+        CASE WHEN m.origem = 'venda'
+          THEN GREATEST(m.quantidade - COALESCE(vi.quantidade_devolvida, 0), 0)
+          ELSE m.quantidade
+        END AS quantidade,
+        m.preco_unitario,
+        m.custo_unitario,
+        m.origem,
+        m.venda_id,
         m.created_at,
 
         p.nome AS nomeProduto,
@@ -51,10 +58,17 @@ export const resumoFinanceiro = async (req, res) => {
       INNER JOIN Produto p
         ON p.id = m.id_Produto
 
+      LEFT JOIN Venda v
+        ON v.id = m.venda_id
+
+      LEFT JOIN VendaItem vi
+        ON vi.venda_id = m.venda_id AND vi.produto_id = m.id_Produto
+
       LEFT JOIN Categoria c
         ON c.id = p.idCategoria
 
       WHERE m.empresa_id = ?
+      AND (m.origem IS NULL OR (m.origem = 'venda' AND v.estado <> 'cancelada'))
 
       ORDER BY m.created_at DESC
       `,

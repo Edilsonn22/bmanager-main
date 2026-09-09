@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search, Edit2, Trash2, X } from "lucide-react";
+import { PackagePlus, Edit2, Trash2 } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { API_URL } from "../api/authenticatedFetch";
+import { ConfirmDialog, Feedback } from "./ui/Feedback";
 
 function Productos() {
   const { usuario } = useAuth();
@@ -15,6 +16,11 @@ function Productos() {
   const [fornecedores, setFornecedores] = useState([]);
   const [pesquisa, setPesquisa] = useState("");
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+  const [produtoExcluir, setProdutoExcluir] = useState(null);
+  const [removendo, setRemovendo] = useState(false);
 
 
 
@@ -22,55 +28,34 @@ function Productos() {
     return `${Number(valor || 0).toLocaleString("pt-MZ")}`;
   };
 
-  useEffect(() => {
-    fetch(`${API_URL}/produtos`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.sucesso) setProdutos(data.produtos);
-      })
-      .catch((err) => console.error(err));
-  }, []);
+  const carregarDados = async () => {
+    setLoading(true); setErro("");
+    try {
+      const respostas = await Promise.all([fetch(`${API_URL}/produtos`), fetch(`${API_URL}/categorias`), fetch(`${API_URL}/fornecedores`)]);
+      const dados = await Promise.all(respostas.map((res) => res.json().then((body) => ({ res, body }))));
+      const falha = dados.find(({ res, body }) => !res.ok || body.sucesso === false);
+      if (falha) throw new Error(falha.body.erro || "Não foi possível carregar os dados.");
+      setProdutos(dados[0].body.produtos || []); setCategorias(dados[1].body.categorias || []); setFornecedores(dados[2].body.fornecedores || []);
+    } catch (error) { setErro(error.message || "Não foi possível carregar os produtos."); }
+    finally { setLoading(false); }
+  };
 
-  useEffect(() => {
-    fetch(`${API_URL}/categorias`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.sucesso) setCategorias(data.categorias);
-      })
-      .catch((err) => console.error(err));
-  }, []);
+  useEffect(() => { carregarDados(); }, []);
 
-  useEffect(() => {
-    fetch(`${API_URL}/fornecedores`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.sucesso) setFornecedores(data.fornecedores);
-      })
-      .catch((err) => console.error(err));
-  }, []);
-
-  const handleDelete = (id) => {
-    if (window.confirm("Tem certeza que deseja excluir este produto?")) {
-      setProdutos(produtos.filter((p) => Number(p.id) !== Number(id)));
-
-      fetch(`${API_URL}/produtos/${id}`, {
+  const handleDelete = async () => {
+    if (!produtoExcluir) return;
+    setRemovendo(true); setErro(""); setSucesso("");
+    try {
+      const response = await fetch(`${API_URL}/produtos/${produtoExcluir.id}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-        .then((response) => {
-          if (response.ok) {
-            alert("Produto excluído com sucesso!");
-          } else {
-            alert("Erro ao excluir produto");
-          }
-        })
-        .catch((error) => {
-          console.error("Erro ao excluir produto:", error);
-          alert("Erro ao excluir produto");
-        });
-    }
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.erro || "Não foi possível excluir o produto.");
+      setProdutos((atuais) => atuais.filter((p) => Number(p.id) !== Number(produtoExcluir.id)));
+      setSucesso("Produto excluído com sucesso."); setProdutoExcluir(null);
+    } catch (error) { setErro(error.message); }
+    finally { setRemovendo(false); }
   };
 
   const GetStatus = (quantidade, estoqueMinimo = 5) => {
@@ -94,36 +79,21 @@ function Productos() {
   });
 
   return (
-    <div className="flex-1 h-screen overflow-auto bg-gray-50 p-7 py-6">
-      <div className="flex items-center justify-between mb-8">
+    <main className="h-screen min-w-0 flex-1 overflow-auto bg-gray-50 p-4 sm:p-6 lg:p-7">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Produtos</h1>
           <p className="text-gray-600 mb-">
-            Gerencie os produtos do seu estoque
+            Gerencie os produtos do seu stock
           </p>
         </div>
 
         {podeGerir && (
-          <Link to="/adicionarProduto">
-            <button className="bg-indigo-600 text-white px-2 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Adicionar
-            </button>
-          </Link>
+          <Link to="/adicionarProduto" className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700"><PackagePlus size={19}/>Adicionar produto</Link>
         )}
       </div>
+      <Feedback tipo="erro" className="mb-4" onClose={() => setErro("")}>{erro}</Feedback>
+      <Feedback tipo="sucesso" className="mb-4" onClose={() => setSucesso("")}>{sucesso}</Feedback>
 
       {/* Pesquisa */}
       <div className="mb-5 flex flex-col gap-3 md:flex-row">
@@ -261,7 +231,7 @@ function Productos() {
                     <td className="px-6 py-3 text-center flex justify-center">
                       {podeGerir && (
                         <Link to={`/editarProduto/${produto.id}`}>
-                          <button className="p-2 hover:bg-gray-100 rounded-lg transition">
+                          <button type="button" aria-label={`Editar ${produto.nome}`} className="p-2 hover:bg-gray-100 rounded-lg transition">
                             <Edit2 className="w-4 h-4 text-gray-600" />
                           </button>
                         </Link>
@@ -269,7 +239,9 @@ function Productos() {
 
                       {podeExcluir && (
                         <button
-                          onClick={() => handleDelete(produto.id)}
+                          type="button"
+                          aria-label={`Excluir ${produto.nome}`}
+                          onClick={() => setProdutoExcluir(produto)}
                           className="p-2 hover:bg-red-50 rounded-lg transition"
                         >
                           <Trash2 className="w-4 h-4 text-red-600" />
@@ -282,14 +254,14 @@ function Productos() {
             </tbody>
           </table>
 
-          {produtosFiltrados.length === 0 && (
-            <p className="text-center text-gray-500 py-6">
-              Nenhum produto encontrado.
-            </p>
+          {loading && <p className="py-8 text-center text-gray-500" role="status">A carregar produtos...</p>}
+          {!loading && !erro && produtosFiltrados.length === 0 && (
+            <div className="px-4 py-10 text-center"><PackagePlus className="mx-auto h-10 w-10 text-slate-300"/><p className="mt-3 font-semibold text-slate-700">{pesquisa || categoriaSelecionada ? "Nenhum produto corresponde aos filtros." : "Ainda não existem produtos."}</p>{podeGerir && !pesquisa && !categoriaSelecionada && <Link to="/adicionarProduto" className="mt-3 inline-flex font-semibold text-indigo-600 hover:underline">Adicionar o primeiro produto</Link>}</div>
           )}
         </div>
       </div>
-    </div>
+      <ConfirmDialog aberto={Boolean(produtoExcluir)} titulo="Excluir produto?" descricao={`O produto “${produtoExcluir?.nome || ""}” será removido. Esta ação não pode ser desfeita.`} ocupada={removendo} onCancelar={() => !removendo && setProdutoExcluir(null)} onConfirmar={handleDelete}/>
+    </main>
   );
 }
 

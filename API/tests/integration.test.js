@@ -249,6 +249,147 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
     assert.equal(result.body.produtos.some((produto) => produto.nome === "Produto exclusivo B"), false);
   });
 
+  test("relatório preserva os preços praticados antes da alteração do produto", async () => {
+    const empresa = await criarEmpresaComAdmin("Empresa Histórico", "historico@teste.local");
+    const token = await iniciarSessao(empresa);
+    const abertura = await resposta("/api/caixa/abrir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ valor_abertura: 0 }),
+    });
+    assert.equal(abertura.status, 201);
+    const [categoria] = await pool.execute(
+      "INSERT INTO Categoria (empresa_id, nome, descr) VALUES (?, ?, ?)",
+      [empresa.empresaId, "Categoria Histórica", "Teste"],
+    );
+    const [fornecedor] = await pool.execute(
+      "INSERT INTO Fornecedor (empresa_id, nome) VALUES (?, ?)",
+      [empresa.empresaId, "Fornecedor Histórico"],
+    );
+    const [produto] = await pool.execute(
+      "INSERT INTO Produto (empresa_id, nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [empresa.empresaId, "Produto Histórico", categoria.insertId, 40, 100, fornecedor.insertId, 10],
+    );
+
+    const vendaCriada = await resposta("/api/vendas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        itens: [{ produto_id: produto.insertId, quantidade: 2 }],
+        forma_pagamento: "dinheiro",
+        valor_recebido: 200,
+      }),
+    });
+    assert.equal(vendaCriada.status, 201);
+
+    await pool.execute(
+      "UPDATE Produto SET precoFornecedor = 80, preco = 250 WHERE id = ?",
+      [produto.insertId],
+    );
+    const resumo = await resposta("/api/financeiro/resumo", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert.equal(resumo.status, 200);
+    const venda = resumo.body.movimentos.find((item) => Number(item.venda_id) === Number(vendaCriada.body.venda.id));
+    assert.equal(Number(venda.preco_unitario), 100);
+    assert.equal(Number(venda.custo_unitario), 40);
+  });
+
+  test("fluxo comercial integra cliente, caixa, venda, devolução, stock e financeiro", async () => {
+    const empresa = await criarEmpresaComAdmin("Empresa Vendas", "vendas@teste.local");
+    const token = await iniciarSessao(empresa);
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    const [categoria] = await pool.execute("INSERT INTO Categoria (empresa_id,nome,descr) VALUES (?,?,'Teste')", [empresa.empresaId, "Vendas"]);
+    const [fornecedor] = await pool.execute("INSERT INTO Fornecedor (empresa_id,nome) VALUES (?,?)", [empresa.empresaId, "Fornecedor"]);
+    const [produto] = await pool.execute("INSERT INTO Produto (empresa_id,nome,idCategoria,precoFornecedor,preco,idFornecedor,quantidade,codigo_barras) VALUES (?,?,?,?,?,?,?,?)", [empresa.empresaId, "Produto vendido", categoria.insertId, 40, 100, fornecedor.insertId, 10, "789123"]);
+
+    const cliente = await resposta("/api/clientes", { method: "POST", headers, body: JSON.stringify({ nome: "Cliente Teste", nuit: "123" }) });
+    assert.equal(cliente.status, 201);
+    const caixa = await resposta("/api/caixa/abrir", { method: "POST", headers, body: JSON.stringify({ valor_abertura: 500 }) });
+    assert.equal(caixa.status, 201);
+    const venda = await resposta("/api/vendas", { method: "POST", headers, body: JSON.stringify({ itens: [{ produto_id: produto.insertId, quantidade: 3 }], cliente_id: cliente.body.cliente.id, desconto: 10, forma_pagamento: "dinheiro", valor_recebido: 300 }) });
+    assert.equal(venda.status, 201);
+    assert.equal(Number(venda.body.venda.total), 290);
+    assert.equal(Number(venda.body.venda.troco), 10);
+    const [[stockAposVenda]] = await pool.execute("SELECT quantidade FROM Produto WHERE id=?", [produto.insertId]);
+    assert.equal(stockAposVenda.quantidade, 7);
+
+    const detalhe = await resposta(`/api/vendas/${venda.body.venda.id}`, { headers });
+    assert.equal(detalhe.status, 200);
+    const devolucao = await resposta(`/api/vendas/${venda.body.venda.id}/itens/${detalhe.body.venda.itens[0].id}/devolver`, { method: "POST", headers, body: JSON.stringify({ quantidade: 1 }) });
+    assert.equal(devolucao.status, 200);
+    const [[stockAposDevolucao]] = await pool.execute("SELECT quantidade FROM Produto WHERE id=?", [produto.insertId]);
+    assert.equal(stockAposDevolucao.quantidade, 8);
+    const resumo = await resposta("/api/financeiro/resumo", { headers });
+    const movimento = resumo.body.movimentos.find((item) => Number(item.venda_id) === Number(venda.body.venda.id));
+    assert.equal(Number(movimento.quantidade), 2);
+
+    const segundaVenda = await resposta("/api/vendas", { method: "POST", headers, body: JSON.stringify({ itens: [{ produto_id: produto.insertId, quantidade: 2 }], forma_pagamento: "mpesa" }) });
+    assert.equal(segundaVenda.status, 201);
+    const cancelamento = await resposta(`/api/vendas/${segundaVenda.body.venda.id}/cancelar`, { method: "POST", headers });
+    assert.equal(cancelamento.status, 200);
+    const [[stockFinal]] = await pool.execute("SELECT quantidade FROM Produto WHERE id=?", [produto.insertId]);
+    assert.equal(stockFinal.quantidade, 8);
+  });
+
+  test("venda exige caixa aberto e preserva o nome do cliente avulso", async () => {
+    const empresa = await criarEmpresaComAdmin("Empresa Cliente Avulso", "avulso@teste.local");
+    const token = await iniciarSessao(empresa);
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    const [categoria] = await pool.execute("INSERT INTO Categoria (empresa_id,nome,descr) VALUES (?,?,'Teste')", [empresa.empresaId, "Avulso"]);
+    const [fornecedor] = await pool.execute("INSERT INTO Fornecedor (empresa_id,nome) VALUES (?,?)", [empresa.empresaId, "Fornecedor Avulso"]);
+    const [produto] = await pool.execute("INSERT INTO Produto (empresa_id,nome,idCategoria,precoFornecedor,preco,idFornecedor,quantidade) VALUES (?,?,?,?,?,?,?)", [empresa.empresaId, "Produto Avulso", categoria.insertId, 20, 50, fornecedor.insertId, 5]);
+    const corpo = { itens: [{ produto_id: produto.insertId, quantidade: 1 }], cliente_nome: "Cliente do Balcão", forma_pagamento: "dinheiro", valor_recebido: 50 };
+
+    const semCaixa = await resposta("/api/vendas", { method: "POST", headers, body: JSON.stringify(corpo) });
+    assert.equal(semCaixa.status, 409);
+
+    const caixa = await resposta("/api/caixa/abrir", { method: "POST", headers, body: JSON.stringify({ valor_abertura: 100 }) });
+    assert.equal(caixa.status, 201);
+    const criada = await resposta("/api/vendas", { method: "POST", headers, body: JSON.stringify(corpo) });
+    assert.equal(criada.status, 201);
+    const detalhe = await resposta(`/api/vendas/${criada.body.venda.id}`, { headers });
+    assert.equal(detalhe.body.venda.cliente, "Cliente do Balcão");
+    const lista = await resposta("/api/vendas", { headers });
+    assert.equal(lista.body.vendas.find((item) => item.id === criada.body.venda.id)?.cliente, "Cliente do Balcão");
+  });
+
+  test("caixa impede abertura duplicada e restringe o fecho ao responsável", async () => {
+    const empresa = await criarEmpresaComAdmin("Empresa Caixa Seguro", "caixa-admin@teste.local");
+    const tokenAdmin = await iniciarSessao(empresa);
+    const bcrypt = (await import("bcryptjs")).default;
+    const senha = "SenhaOperador123";
+    const [operador] = await pool.execute(
+      "INSERT INTO Usuario (nome,email,senha,empresa_id,role) VALUES (?,?,?,?, 'operador')",
+      ["Operador Caixa", "caixa-operador@teste.local", await bcrypt.hash(senha, 10), empresa.empresaId],
+    );
+    const tokenOperador = await iniciarSessao({ email: "caixa-operador@teste.local", senha });
+    const headersAdmin = { "Content-Type": "application/json", Authorization: `Bearer ${tokenAdmin}` };
+    const [primeira, segunda] = await Promise.all([
+      resposta("/api/caixa/abrir", { method: "POST", headers: headersAdmin, body: JSON.stringify({ valor_abertura: 250 }) }),
+      resposta("/api/caixa/abrir", { method: "POST", headers: headersAdmin, body: JSON.stringify({ valor_abertura: 250 }) }),
+    ]);
+    const resultados = [primeira, segunda].sort((a, b) => a.status - b.status);
+    assert.deepEqual(resultados.map((item) => item.status), [201, 409]);
+    const caixaId = resultados[0].body.id;
+
+    const fechoNegado = await resposta(`/api/caixa/${caixaId}/fechar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenOperador}` },
+      body: JSON.stringify({ valor_fecho: 250 }),
+    });
+    assert.equal(fechoNegado.status, 403);
+    assert.ok(operador.insertId);
+
+    const fechoAdmin = await resposta(`/api/caixa/${caixaId}/fechar`, {
+      method: "POST",
+      headers: headersAdmin,
+      body: JSON.stringify({ valor_fecho: 240 }),
+    });
+    assert.equal(fechoAdmin.status, 200);
+    assert.equal(Number(fechoAdmin.body.fecho.diferenca), -10);
+  });
+
   test("downgrade e cancelamento preservam o período contratado", async () => {
     const empresa = await criarEmpresaComAdmin("Empresa Comercial", "comercial@teste.local");
     await pool.execute(

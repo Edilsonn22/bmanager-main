@@ -128,9 +128,9 @@ function Financeiro() {
        * preco = preço de venda
        * precoFornecedor = preço de compra
        */
-      const precoVenda = Number(produto.preco || 0);
+      const precoVenda = Number(movimento.preco_unitario ?? produto.preco ?? 0);
       const precoFornecedor = Number(
-        produto.precoFornecedor || 0
+        movimento.custo_unitario ?? produto.precoFornecedor ?? 0
       );
 
       receitaTotal += precoVenda * quantidadeVendida;
@@ -197,6 +197,8 @@ function Financeiro() {
    * Últimos movimentos
    */
   const movimentosRecentes = movimentos.slice(0, 10);
+
+
 
   return (
     <div className="flex-1 h-screen overflow-auto p-7 py-6 bg-gray-50">
@@ -321,7 +323,7 @@ function Financeiro() {
           <strong className="text-red-700">{formatarMzn(despesas)}</strong>
         </div>
 
-        {/* Lucro líquido */}
+        
         <div className="bg-blue-100 rounded-2xl p-4 font-bold flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Wallet className="text-blue-600 mb-1" />
@@ -393,10 +395,9 @@ function Financeiro() {
 
                     const quantidade = Number(movimento.quantidade || 0);
 
-                    const preco =
-                      movimento.tipo === "saida"
-                        ? Number(produto?.preco || 0)
-                        : Number(produto?.precoFornecedor || 0);
+                    const preco = movimento.tipo === "saida"
+                      ? Number(movimento.preco_unitario ?? produto?.preco ?? 0)
+                      : Number(movimento.custo_unitario ?? produto?.precoFornecedor ?? 0);
 
                     const valor = preco * quantidade;
 
