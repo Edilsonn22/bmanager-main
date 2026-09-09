@@ -13,27 +13,57 @@ const layout = (titulo, conteudo) => `
     <p style="margin-top:32px;color:#64748b;font-size:13px">Esta é uma mensagem automática da Vendai.</p>
   </div>`;
 
+const criarTransportador = () => {
+  if (process.env.NODE_ENV === "test" && process.env.SMTP_JSON_TRANSPORT === "true") {
+    return nodemailer.createTransport({ jsonTransport: true });
+  }
+  const porta = Number(process.env.SMTP_PORT || 587);
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: porta,
+    secure: process.env.SMTP_SECURE === "true" || porta === 465,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
+  });
+};
+
 export const enviarEmail = async ({ para, assunto, html }) => {
-  const apiKey = process.env.RESEND_API_KEY;
+  const host = process.env.SMTP_HOST;
+  const usuario = process.env.SMTP_USER;
+  const senha = process.env.SMTP_PASSWORD;
   const remetente = process.env.EMAIL_FROM;
-  if (!apiKey || !remetente) {
-    console.warn("E-mail não enviado: configure RESEND_API_KEY e EMAIL_FROM.");
+  if (!host || !usuario || !senha || !remetente) {
+    console.warn("E-mail não enviado: configure SMTP_HOST, SMTP_USER, SMTP_PASSWORD e EMAIL_FROM.");
     return { enviado: false, motivo: "nao_configurado" };
   }
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "User-Agent": "bmanager/1.0" },
-    body: JSON.stringify({ from: remetente, to: [para], subject: assunto, html }),
-  });
-  if (!response.ok) throw new Error((await response.json().catch(() => ({}))).message || "Falha ao enviar e-mail.");
-  return { enviado: true };
+  const transportador = criarTransportador();
+  const info = await transportador.sendMail({ from: remetente, to: para, subject: assunto, html });
+  return {
+    enviado: true,
+    messageId: info.messageId,
+    ...(process.env.NODE_ENV === "test" ? { conteudoTeste: info.message } : {}),
+  };
+};
+
+export const verificarSMTP = async () => {
+  const obrigatorias = ["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM"];
+  const ausentes = obrigatorias.filter((nome) => !process.env[nome]?.trim());
+  if (ausentes.length) throw new Error(`Configuração incompleta: ${ausentes.join(", ")}`);
+  if (!/^.+<[^<>\s@]+@[^<>\s@]+\.[^<>\s@]+>$/.test(process.env.EMAIL_FROM) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.EMAIL_FROM)) {
+    throw new Error("EMAIL_FROM deve conter um endereço de e-mail válido.");
+  }
+  const transportador = criarTransportador();
+  await transportador.verify();
+  return true;
 };
 
 export const enviarEmailSeguro = async (dados) => {
   try {
     return await enviarEmail(dados);
   } catch (error) {
-    console.error(`Erro ao enviar e-mail para ${dados.para}:`, error.message);
+    console.error("Erro ao enviar e-mail pelo SMTP:", error.message);
     return { enviado: false, motivo: "falha_no_provedor" };
   }
 };
@@ -61,3 +91,4 @@ export const enviarAvisoExpiracao = ({ para, plano, data }) => enviarEmailSeguro
   assunto: "A sua assinatura está a expirar",
   html: layout("Renove a sua assinatura", `<p>O plano <strong>${escaparHtml(plano)}</strong> expira em <strong>${escaparHtml(data)}</strong>.</p><p>Entre na Vendai para renovar e manter o acesso sem interrupções.</p>`),
 });
+import nodemailer from "nodemailer";

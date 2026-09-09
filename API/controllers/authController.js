@@ -121,6 +121,7 @@ export const login = async (req, res) => {
 export const solicitarRecuperacaoSenha = async (req, res) => {
   try {
     const email = req.body?.email?.trim().toLowerCase();
+    let linkDesenvolvimento = null;
     if (email) {
       const [usuarios] = await pool.execute("SELECT id FROM Usuario WHERE email = ?", [email]);
       if (usuarios[0]) {
@@ -129,11 +130,14 @@ export const solicitarRecuperacaoSenha = async (req, res) => {
         await pool.execute("DELETE FROM recuperacao_senha WHERE usuario_id = ? AND usado_em IS NULL", [usuarios[0].id]);
         await pool.execute("INSERT INTO recuperacao_senha (usuario_id, token_hash, expira_em) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))", [usuarios[0].id, hash]);
         const link = `${process.env.CLIENT_URL || "http://localhost:5173"}/redefinir-senha?token=${token}`;
-        await enviarRecuperacaoSenha({ para: email, link });
-        if (process.env.NODE_ENV === "development") console.info(`Token de recuperação para ${email}: ${token}`);
+        const envio = await enviarRecuperacaoSenha({ para: email, link });
+        if (!envio.enviado && process.env.NODE_ENV === "development") linkDesenvolvimento = link;
       }
     }
-    return res.json({ message: "Se o e-mail existir, receberá as instruções de recuperação." });
+    return res.json({
+      message: "Se o e-mail existir, receberá as instruções de recuperação.",
+      ...(linkDesenvolvimento ? { link_desenvolvimento: linkDesenvolvimento } : {}),
+    });
   } catch (error) {
     console.error("Erro ao solicitar recuperação:", error.message);
     return res.status(500).json({ message: "Não foi possível iniciar a recuperação." });
@@ -141,22 +145,32 @@ export const solicitarRecuperacaoSenha = async (req, res) => {
 };
 
 export const redefinirSenha = async (req, res) => {
+  let connection;
   try {
     const { token, senha } = req.body ?? {};
-    if (!token || !senha || senha.length < 6) return res.status(400).json({ message: "Token e senha de pelo menos 6 caracteres são obrigatórios." });
+    if (!token || !senha || senha.length < 8) return res.status(400).json({ message: "Token e senha de pelo menos 8 caracteres são obrigatórios." });
     const hash = crypto.createHash("sha256").update(token).digest("hex");
-    const [tokens] = await pool.execute(
-      "SELECT id, usuario_id FROM recuperacao_senha WHERE token_hash = ? AND usado_em IS NULL AND expira_em > NOW()",
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    const [tokens] = await connection.execute(
+      "SELECT id, usuario_id FROM recuperacao_senha WHERE token_hash = ? AND usado_em IS NULL AND expira_em > NOW() FOR UPDATE",
       [hash]
     );
-    if (!tokens[0]) return res.status(400).json({ message: "Token inválido ou expirado." });
+    if (!tokens[0]) {
+      await connection.rollback();
+      return res.status(400).json({ message: "Token inválido ou expirado." });
+    }
     const senhaHash = await bcrypt.hash(senha, 12);
-    await pool.execute("UPDATE Usuario SET senha = ?, token_version = token_version + 1 WHERE id = ?", [senhaHash, tokens[0].usuario_id]);
-    await pool.execute("UPDATE recuperacao_senha SET usado_em = NOW() WHERE id = ?", [tokens[0].id]);
+    await connection.execute("UPDATE Usuario SET senha = ?, token_version = token_version + 1 WHERE id = ?", [senhaHash, tokens[0].usuario_id]);
+    await connection.execute("UPDATE recuperacao_senha SET usado_em = NOW() WHERE usuario_id = ? AND usado_em IS NULL", [tokens[0].usuario_id]);
+    await connection.commit();
     return res.json({ message: "Senha atualizada com sucesso." });
   } catch (error) {
+    if (connection) await connection.rollback();
     console.error("Erro ao redefinir senha:", error.message);
     return res.status(500).json({ message: "Não foi possível redefinir a senha." });
+  } finally {
+    connection?.release();
   }
 };
 

@@ -3,7 +3,7 @@ const placeholders = ["gere_um_segredo", "seu_segredo", "changeme", "example"];
 export function validarAmbienteProducao(env = process.env) {
   if (env.NODE_ENV !== "production") return;
 
-  const obrigatorias = ["CLIENT_URL", "JWT_SECRET", "DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"];
+  const obrigatorias = ["CLIENT_URL", "JWT_SECRET", "DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME", "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM"];
   const ausentes = obrigatorias.filter((nome) => !env[nome]?.trim());
   if (ausentes.length) throw new Error(`Variáveis obrigatórias ausentes: ${ausentes.join(", ")}`);
 

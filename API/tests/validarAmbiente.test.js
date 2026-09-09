@@ -15,6 +15,10 @@ test("produção rejeita segredo fraco e URL sem HTTPS", () => {
     DB_USER: "app",
     DB_PASSWORD: "senha",
     DB_NAME: "bmanager",
+    SMTP_HOST: "smtp.exemplo.com",
+    SMTP_USER: "utilizador",
+    SMTP_PASSWORD: "senha-smtp",
+    EMAIL_FROM: "Vendai <no-reply@exemplo.com>",
   };
   assert.throws(() => validarAmbienteProducao(base), /JWT_SECRET/);
   assert.throws(() => validarAmbienteProducao({ ...base, JWT_SECRET: "a".repeat(48) }), /HTTPS/);
@@ -29,5 +33,9 @@ test("produção aceita configuração essencial segura", () => {
     DB_USER: "app",
     DB_PASSWORD: "senha-forte",
     DB_NAME: "bmanager",
+    SMTP_HOST: "smtp.exemplo.com",
+    SMTP_USER: "utilizador",
+    SMTP_PASSWORD: "senha-smtp",
+    EMAIL_FROM: "Vendai <no-reply@exemplo.com>",
   }));
 });
