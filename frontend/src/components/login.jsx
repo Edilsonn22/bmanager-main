@@ -46,6 +46,7 @@ export default function Login() {
           </h1>
           <p className="mt-1 text-slate-500">Aceda ao painel da sua empresa.</p>
         </div>
+        <Feedback tipo="sucesso">{location.state?.senhaRedefinida ? "Senha atualizada com sucesso. Entre com a nova senha." : ""}</Feedback>
         <Feedback tipo="erro">{erro}</Feedback>
         <label className="block text-sm font-medium text-slate-700">
           E-mail
