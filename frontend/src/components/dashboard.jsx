@@ -42,7 +42,7 @@ function Dashboard() {
     },
 
     {
-      label: "Valor do Estoque",
+      label: "Valor do stock",
       value: "0 Mzn",
       icon: DollarSign,
       color: "text-green-500",
@@ -267,7 +267,7 @@ function Dashboard() {
           },
 
           {
-            label: "Valor do Estoque",
+            label: "Valor do stock",
             value: formatarMzn(valorEstoque),
             icon: DollarSign,
             color: "text-green-500",
@@ -527,7 +527,7 @@ function Dashboard() {
       >
         {stats
           .filter(
-            (stat) => stat.label !== "Valor do Estoque" || podeVerEstatistica,
+            (stat) => stat.label !== "Valor do stock" || podeVerEstatistica,
           )
           .map((stat) => (
             <div
@@ -630,7 +630,7 @@ function Dashboard() {
               text-gray-900
             "
           >
-            Alerta de Estoque Baixo
+            Alerta de stock baixo
           </h3>
         </div>
 
@@ -706,7 +706,7 @@ function Dashboard() {
                       text-white
                     "
                 >
-                  Estoque baixo
+                  Stock baixo
                 </span>
               </div>
             </div>
@@ -750,7 +750,7 @@ function Dashboard() {
               text-gray-900
             "
           >
-            Top 5 de Movimentos de Estoque Recentes
+            5 movimentos de stock mais recentes
           </h3>
         </div>
 

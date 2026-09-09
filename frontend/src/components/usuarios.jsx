@@ -157,9 +157,9 @@ export default function Usuarios() {
                 value={form.role}
                 onChange={mudar("role")}
               >
-                <option value="operador">Operador — estoque</option>
+                <option value="operador">Operador — stock</option>
                 <option value="gestor">
-                  Gestor — estoque, financeiro e relatórios
+                  Gestor — stock, financeiro e relatórios
                 </option>
               </select>
             </label>

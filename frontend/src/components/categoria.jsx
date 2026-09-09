@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search, Edit2, Trash2, X } from "lucide-react";
+import { Tags, Edit2, Trash2 } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { API_URL } from "../api/authenticatedFetch";
+import { ConfirmDialog, Feedback } from "./ui/Feedback";
 
 function Categoria() {
   const { usuario } = useAuth();
@@ -10,6 +11,11 @@ function Categoria() {
   const podeExcluir = usuario?.role === "admin";
   const [categorias, setCategorias] = useState([]);
   const [pesquisa, setPesquisa] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+  const [categoriaExcluir, setCategoriaExcluir] = useState(null);
+  const [removendo, setRemovendo] = useState(false);
 
   // Buscar categorias do backend
   useEffect(() => {
@@ -17,31 +23,31 @@ function Categoria() {
       .then((res) => res.json())
       .then((data) => {
         if (data.sucesso) setCategorias(data.categorias);
-        else console.error(data.erro);
+        else throw new Error(data.erro || "Não foi possível carregar as categorias.");
       })
-      .catch((err) => console.error("Erro ao carregar categorias:", err));
+      .catch((err) => setErro(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
   // Deletar categoria
-  const handleDelete = async (id) => {
-    if (!window.confirm("Tem certeza que deseja excluir esta categoria?")) return;
-
+  const handleDelete = async () => {
+    if (!categoriaExcluir) return;
+    setRemovendo(true); setErro(""); setSucesso("");
     try {
-      const res = await fetch(`${API_URL}/categorias/${id}`, {
+      const res = await fetch(`${API_URL}/categorias/${categoriaExcluir.id}`, {
         method: "DELETE",
       });
       const data = await res.json();
 
       if (data.sucesso) {
-        setCategorias(categorias.filter((c) => c.id !== id));
-        alert("Categoria excluída com sucesso!");
+        setCategorias((atuais) => atuais.filter((c) => c.id !== categoriaExcluir.id));
+        setSucesso("Categoria excluída com sucesso."); setCategoriaExcluir(null);
       } else {
-        alert("Erro ao deletar categoria: " + data.erro);
+        throw new Error(data.erro || "Não foi possível excluir a categoria.");
       }
     } catch (error) {
-      console.error("Erro ao deletar categoria:", error);
-      alert("Erro ao deletar categoria");
-    }
+      setErro(error.message);
+    } finally { setRemovendo(false); }
   };
 
   const categoriasFiltradas = categorias.filter((c) =>
@@ -49,8 +55,8 @@ function Categoria() {
   );
 
   return (
-    <div className="flex-1 h-screen overflow-auto bg-gray-50 p-7 py-6">
-      <div className="flex items-center justify-between mb-8">
+    <main className="h-screen min-w-0 flex-1 overflow-auto bg-gray-50 p-4 sm:p-6 lg:p-7">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Categorias</h1>
           <p className="text-gray-600 mb-">
@@ -59,7 +65,7 @@ function Categoria() {
         </div>
         {podeGerir && (
           <Link to="/adicionarCategoria">
-            <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
+            <button type="button" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -73,11 +79,12 @@ function Categoria() {
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              Adicionar
+              Adicionar categoria
             </button>
           </Link>
         )}
       </div>
+      <Feedback tipo="erro" className="mb-4" onClose={() => setErro("")}>{erro}</Feedback><Feedback tipo="sucesso" className="mb-4" onClose={() => setSucesso("")}>{sucesso}</Feedback>
 
       {/* Pesquisa */}
       <div className="relative mb-5">
@@ -133,14 +140,14 @@ function Categoria() {
 
                     {podeGerir && (
                       <Link to={`/editarCategoria/${categoria.id}`}>
-                        <button className="p-2 hover:bg-gray-100 rounded-lg transition">
+                        <button type="button" aria-label={`Editar ${categoria.nome}`} className="p-2 hover:bg-gray-100 rounded-lg transition">
                           <Edit2 className="w-4 h-4 text-gray-600" />
                         </button>
                       </Link>
                     )}
                     {podeExcluir && (
                       <button
-                        onClick={() => handleDelete(categoria.id)}
+                        type="button" aria-label={`Excluir ${categoria.nome}`} onClick={() => setCategoriaExcluir(categoria)}
                         className="p-2 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />
@@ -152,14 +159,14 @@ function Categoria() {
             </tbody>
           </table>
 
-          {categoriasFiltradas.length === 0 && (
-            <p className="text-center text-gray-500 py-6">
-              Nenhuma categoria encontrada.
-            </p>
+          {loading && <p className="py-8 text-center text-gray-500" role="status">A carregar categorias...</p>}
+          {!loading && !erro && categoriasFiltradas.length === 0 && (
+            <div className="px-4 py-10 text-center"><Tags className="mx-auto h-10 w-10 text-slate-300"/><p className="mt-3 font-semibold text-slate-700">{pesquisa ? "Nenhuma categoria corresponde à pesquisa." : "Ainda não existem categorias."}</p>{podeGerir && !pesquisa && <Link to="/adicionarCategoria" className="mt-3 inline-flex font-semibold text-indigo-600 hover:underline">Criar a primeira categoria</Link>}</div>
           )}
         </div>
       </div>
-    </div>
+      <ConfirmDialog aberto={Boolean(categoriaExcluir)} titulo="Excluir categoria?" descricao={`A categoria “${categoriaExcluir?.nome || ""}” será removida. Produtos associados podem ser afetados.`} ocupada={removendo} onCancelar={() => !removendo && setCategoriaExcluir(null)} onConfirmar={handleDelete}/>
+    </main>
   );
 }
 
