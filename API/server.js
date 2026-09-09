@@ -14,10 +14,15 @@ import historicoPagamentoRoutes from "./routes/historicoPagamentoRoutes.js";
 import notificacaoRoutes from "./routes/notificacaoRoutes.js";
 import plataformaRoutes from "./routes/plataformaRoutes.js";
 import suporteRoutes from "./routes/suporteRoutes.js";
+import vendaRoutes from "./routes/vendaRoutes.js";
+import clienteRoutes from "./routes/clienteRoutes.js";
+import caixaRoutes from "./routes/caixaRoutes.js";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import { validarCorpoJson } from "./middlewares/validation.js";
 import { agendarRotinaAssinaturas } from "./services/rotinaAssinaturasService.js";
+import pool from "./config/db.js";
+import { validarAmbienteProducao } from "./config/validarAmbiente.js";
 
 dotenv.config();
 
@@ -31,7 +36,15 @@ export function createApp() {
   app.use(express.json({ limit: "100kb" }));
   app.use(validarCorpoJson);
 
-  app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+  app.get("/api/health", (_req, res) => res.json({ status: "ok", uptime: Math.round(process.uptime()) }));
+  app.get("/api/ready", async (_req, res) => {
+    try {
+      await pool.query("SELECT 1");
+      res.json({ status: "ready", database: "connected" });
+    } catch {
+      res.status(503).json({ status: "unavailable", database: "disconnected" });
+    }
+  });
   app.use("/api/auth", authRoutes);
   app.use("/api/financeiro", financeiroRoutes);
   app.use("/api/pagamentos", pagamentoRoutes);
@@ -45,6 +58,9 @@ export function createApp() {
   app.use("/api/categorias", categoriaRoutes);
   app.use("/api/fornecedores", fornecedorRoutes);
   app.use("/api/movimentos", movimentoRoutes);
+  app.use("/api/vendas", vendaRoutes);
+  app.use("/api/clientes", clienteRoutes);
+  app.use("/api/caixa", caixaRoutes);
 
   app.use((error, _req, res, _next) => {
     console.error("Erro não tratado na API:", error);
@@ -57,11 +73,23 @@ export function createApp() {
 }
 
 if (process.env.NODE_ENV !== "test") {
+  validarAmbienteProducao();
   const port = process.env.PORT || 3000;
-  createApp().listen(port, () => {
+  const server = createApp().listen(port, () => {
     console.log(`Servidor rodando na porta ${port}`);
   });
   agendarRotinaAssinaturas();
+
+  const encerrar = (signal) => {
+    console.log(`${signal} recebido. A encerrar servidor...`);
+    server.close(async () => {
+      await pool.end();
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.once("SIGTERM", () => encerrar("SIGTERM"));
+  process.once("SIGINT", () => encerrar("SIGINT"));
 }
 
 
