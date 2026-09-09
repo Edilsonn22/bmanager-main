@@ -12,7 +12,8 @@ export const criarRateLimit = ({ janelaMs, maximo, mensagem }) => (req, res, nex
   }
   registro.tentativas += 1;
   registros.set(chave, registro);
-  if (registro.tentativas > maximo) {
+  const limite = typeof maximo === "function" ? maximo() : maximo;
+  if (registro.tentativas > limite) {
     res.set("Retry-After", String(Math.ceil((registro.reiniciaEm - agora) / 1000)));
     return res.status(429).json({ message: mensagem, sucesso: false });
   }
@@ -20,5 +21,9 @@ export const criarRateLimit = ({ janelaMs, maximo, mensagem }) => (req, res, nex
 };
 
 export const limiteLogin = criarRateLimit({ janelaMs: 15 * 60 * 1000, maximo: 10, mensagem: "Muitas tentativas. Aguarde 15 minutos antes de tentar novamente." });
-export const limiteRecuperacao = criarRateLimit({ janelaMs: 60 * 60 * 1000, maximo: 3, mensagem: "Muitos pedidos de recuperação. Aguarde uma hora." });
+export const limiteRecuperacao = criarRateLimit({
+  janelaMs: 60 * 60 * 1000,
+  maximo: () => process.env.NODE_ENV === "production" ? 3 : 30,
+  mensagem: "Muitos pedidos de recuperação. Aguarde uma hora.",
+});
 export const limiteWebhook = criarRateLimit({ janelaMs: 60 * 1000, maximo: 120, mensagem: "Limite de webhooks excedido." });
