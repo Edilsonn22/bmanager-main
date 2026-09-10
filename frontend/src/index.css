@@ -4,23 +4,44 @@
 @keyframes landing-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 @keyframes landing-orb { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(24px, 18px, 0) scale(1.08); } }
 @keyframes landing-shine { from { transform: translateX(-140%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
+@keyframes landing-nav-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes landing-dashboard-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes landing-pulse-soft { 0%, 100% { box-shadow: 0 0 0 0 rgb(79 70 229 / 0); } 50% { box-shadow: 0 0 0 6px rgb(79 70 229 / .07); } }
+@keyframes landing-showcase-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(15deg); } 75% { transform: rotate(-8deg); } }
 .landing-page { isolation: isolate; position: relative; }
+.landing-nav { animation: landing-nav-in 420ms ease-out both; }
 .landing-grid { background-image: linear-gradient(rgb(99 102 241 / 0.055) 1px, transparent 1px), linear-gradient(90deg, rgb(99 102 241 / 0.055) 1px, transparent 1px); background-size: 64px 64px; mask-image: linear-gradient(to bottom, black, transparent 70%); }
-.landing-orb { position: absolute; z-index: 0; border-radius: 9999px; filter: blur(80px); pointer-events: none; animation: landing-orb 10s ease-in-out infinite; }
+.landing-orb { display: none; }
 .landing-orb-one { top: 1rem; left: 7%; width: 24rem; height: 24rem; background: rgb(196 181 253 / 0.42); }
 .landing-orb-two { top: 17rem; right: 3%; width: 28rem; height: 28rem; background: rgb(186 230 253 / 0.46); animation-delay: -5s; }
 .landing-enter { animation: landing-enter 700ms cubic-bezier(.2,.7,.2,1) both; }
 .landing-delay { animation-delay: 150ms; }
-.landing-float { animation: landing-float 4s ease-in-out infinite; }
+.landing-float { animation: none; }
 .landing-gradient-text { background: linear-gradient(110deg, #7c3aed, #4f46e5 52%, #0284c7); background-clip: text; -webkit-background-clip: text; color: transparent; }
 .landing-feature, .landing-dashboard { will-change: transform; }
+.landing-dashboard { animation: landing-dashboard-breathe 7s ease-in-out infinite; }
+.landing-feature span { transition: transform 240ms ease, background-color 240ms ease, color 240ms ease; }
+.landing-feature:hover span { transform: translateY(-2px) scale(1.04); }
+.landing-page a, .landing-page button { transition-duration: 200ms; }
+.landing-page a:active, .landing-page button:active { transform: scale(.98); }
+.landing-cta-glow { position: absolute; inset: -60% 20% auto; height: 20rem; border-radius: 9999px; background: rgb(255 255 255 / .18); filter: blur(70px); pointer-events: none; }
 .landing-page { scroll-behavior: smooth; }
-.landing-reveal { opacity: 0; transform: translateY(28px); transition: opacity 700ms ease, transform 700ms cubic-bezier(.2,.7,.2,1); }
+.landing-reveal { opacity: 0; transform: translateY(14px); transition: opacity 450ms ease, transform 450ms ease; }
 .landing-reveal.is-visible { opacity: 1; transform: translateY(0); }
 .landing-feature:nth-child(2) { transition-delay: 100ms; }
 .landing-feature:nth-child(3) { transition-delay: 200ms; }
-.landing-dashboard::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 20%; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .45), transparent); pointer-events: none; animation: landing-shine 7s ease-in-out infinite 1.2s; }
+.landing-feature:nth-child(4) { transition-delay: 60ms; }
+.landing-feature:nth-child(5) { transition-delay: 120ms; }
+.landing-feature:nth-child(6) { transition-delay: 180ms; }
+.landing-page #planos article:hover { transform: translateY(-4px); }
+.landing-page #planos article { transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease; }
+.landing-page #planos article:nth-child(2) button { animation: landing-pulse-soft 4s ease-in-out infinite; }
+.landing-dashboard::after { display: none; }
+.landing-product-shot { animation: landing-enter 420ms cubic-bezier(.2,.7,.2,1) both; }
+.landing-showcase-progress { animation: landing-showcase-progress 6s linear both; }
+.landing-showcase-progress.is-paused { animation-play-state: paused; }
+.landing-carousel button:focus-visible { outline: 2px solid rgb(148 163 184 / .75); outline-offset: 3px; }
 @media (max-width: 639px) {
   .landing-orb { filter: blur(60px); }
   .landing-orb-one { left: -9rem; width: 20rem; height: 20rem; }
@@ -45,7 +66,7 @@
   .landing-hero { min-height: 42rem; }
   .landing-dashboard { transform: scale(1.02); }
 }
-@media (prefers-reduced-motion: reduce) { .landing-page, .landing-page *, .landing-orb { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } .landing-reveal { opacity: 1; transform: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { .landing-page, .landing-page *, .landing-orb { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } .landing-reveal { opacity: 1; transform: none; transition: none; } .landing-dashboard { transform: none !important; } }
 
 @layer base {
 * {
@@ -180,6 +201,32 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .commerce-page .commerce-panel > div:first-child p { color: #6b7280; }
 .commerce-page .commerce-panel > div:first-child > div > span { background: #eef2ff; color: #4f46e5; }
 .commerce-page .backdrop-blur-sm { backdrop-filter: none; }
+
+/* Painel: acompanha o padrão visual das páginas operacionais */
+.dashboard-page { color: #0f172a; }
+.dashboard-page > div:first-child h2 { font-size: clamp(1.5rem, 3vw, 1.875rem); letter-spacing: -.025em; }
+.dashboard-page > div:first-child p { color: #64748b; }
+.dashboard-page > div:first-child p span { color: #334155; }
+.dashboard-page > div:first-child button { min-height: 2.75rem; border-radius: .75rem; background: #4f46e5; padding-left: 1rem; padding-right: 1rem; font-weight: 700; box-shadow: 0 4px 12px rgb(79 70 229 / .16); }
+.dashboard-page > div:first-child button:hover { background: #4338ca; }
+.dashboard-page > div:nth-child(3), .dashboard-page > div:nth-child(4) { border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 1px 2px rgb(15 23 42 / .04); }
+.dashboard-page > div:nth-child(3) > div:first-child, .dashboard-page > div:nth-child(4) > div:first-child { padding-bottom: .9rem; border-bottom: 1px solid #f1f5f9; }
+.dashboard-page > div:nth-child(3) > div:not(:first-child) { margin-bottom: .5rem; border: 1px solid #fee2e2; border-radius: .75rem; background: #fffafa; }
+.dashboard-page > div:nth-child(4) > div:not(:first-child) { margin-bottom: 0; border-bottom: 1px solid #f1f5f9; }
+.dashboard-page > div:nth-child(4) > div:last-child { border-bottom: 0; }
+@media (max-width: 639px) { .dashboard-page > div:nth-child(3), .dashboard-page > div:nth-child(4) { padding: 1rem; } }
+
+/* Financeiro: mesmo acabamento visual do painel */
+.financeiro-page { color: #0f172a; }
+.financeiro-page > div:first-child h2 { font-size: clamp(1.5rem, 3vw, 1.875rem); letter-spacing: -.025em; }
+.financeiro-page > div:first-child p { color: #64748b; }
+.financeiro-page > div:first-child button { min-height: 2.75rem; box-shadow: 0 4px 12px rgb(79 70 229 / .16); }
+.financeiro-panel { border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 1px 2px rgb(15 23 42 / .04); }
+.financeiro-panel > h3, .financeiro-panel > h2 { font-size: 1rem; font-weight: 700; }
+.financeiro-panel > div { border-radius: .75rem; }
+.financeiro-panel .overflow-x-auto { border-radius: .75rem; box-shadow: none; }
+.financeiro-page tbody tr { transition: background-color 160ms ease; }
+@media (max-width: 639px) { .financeiro-page { padding: 4.75rem 1rem 2rem; } .financeiro-page > div:first-child { align-items: stretch; gap: 1rem; } .financeiro-page > div:first-child a, .financeiro-page > div:first-child button { width: 100%; justify-content: center; } }
 @media (max-width: 639px) { .commerce-header { align-items: stretch; } .commerce-header > a, .commerce-header > button { width: 100%; justify-content: center; text-align: center; } }
 @page { size: A4 portrait; margin: 12mm; }
 @page receipt-thermal { size: 80mm auto; margin: 4mm; }

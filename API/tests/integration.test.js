@@ -74,18 +74,19 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
     await schemaConnection.end();
 
     debitoServer = http.createServer(async (req, res) => {
-      if (req.method !== "POST" || req.url !== "/wallets/123/c2b/mpesa") {
+      if (req.method !== "POST" || req.url !== "/payment-orchestrator") {
         res.writeHead(404).end();
         return;
       }
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ debito_reference: "DBT_TEST_123", transaction_id: 123, status: "PENDING" }));
+      res.end(JSON.stringify({ success: true, payment_id: "DBT_TEST_123", status: "pending" }));
     });
     await new Promise((resolve) => debitoServer.listen(0, "127.0.0.1", resolve));
     const debitoPort = debitoServer.address().port;
     process.env.DEBITO_BASE_URL = `http://127.0.0.1:${debitoPort}`;
     process.env.DEBITO_API_TOKEN = "token-de-teste";
-    process.env.DEBITO_WALLET_ID = "123";
+    process.env.DEBITO_MERCHANT_ID = "merchant-test";
+    process.env.DEBITO_WALLET_CODE = "wallet-test";
 
     const [{ default: importedPool }, { createApp }] = await Promise.all([
       import("../config/db.js"),
@@ -111,10 +112,11 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
   });
 
   test("login aceita credenciais válidas e rejeita senha incorreta", async () => {
+    const conta = await criarEmpresaComAdmin("Empresa Login", "login.teste@vendai.local");
     const sucesso = await resposta("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "edilson@gmail", senha: "e12345678E" }),
+      body: JSON.stringify({ email: conta.email, senha: conta.senha }),
     });
     assert.equal(sucesso.status, 200);
     assert.ok(sucesso.body.token);
@@ -122,16 +124,17 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
     const falha = await resposta("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "edilson@gmail", senha: "senha-errada" }),
+      body: JSON.stringify({ email: conta.email, senha: "senha-errada" }),
     });
     assert.equal(falha.status, 401);
   });
 
   test("recuperação de senha gera um token temporário sem revelar se o e-mail existe", async () => {
+    const conta = await criarEmpresaComAdmin("Empresa Recuperação", "recuperacao@teste.local");
     const existente = await resposta("/api/auth/recuperar-senha", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "edilson@gmail" }),
+      body: JSON.stringify({ email: conta.email }),
     });
     const inexistente = await resposta("/api/auth/recuperar-senha", {
       method: "POST",
@@ -140,7 +143,7 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
     });
     assert.equal(existente.status, 200);
     assert.equal(existente.body.message, inexistente.body.message);
-    const [tokens] = await pool.execute("SELECT id FROM recuperacao_senha WHERE usuario_id = 1 AND usado_em IS NULL");
+    const [tokens] = await pool.execute("SELECT id FROM recuperacao_senha WHERE usuario_id = ? AND usado_em IS NULL", [conta.usuarioId]);
     assert.equal(tokens.length, 1);
   });
 
@@ -437,11 +440,11 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
     assert.equal(pagamento.status, 201);
     assert.equal(pagamento.body.pagamento.id, "DBT_TEST_123");
 
-    const evento = JSON.stringify({ event: "payment.completed", data: { debito_reference: "DBT_TEST_123", transaction_id: "tx_123" } });
+    const evento = JSON.stringify({ event: "payment.completed", data: { payment_id: "DBT_TEST_123", transaction_id: "tx_123" } });
     const assinatura = crypto.createHmac("sha256", process.env.DEBITO_WEBHOOK_SECRET).update(evento).digest("hex");
     const webhook = await resposta("/api/webhooks/debito", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Webhook-Signature": `sha256=${assinatura}` },
+      headers: { "Content-Type": "application/json", "x-debitopay-signature": assinatura },
       body: evento,
     });
     assert.equal(webhook.status, 200);

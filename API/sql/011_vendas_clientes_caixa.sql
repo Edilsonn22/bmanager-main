@@ -23,7 +23,7 @@ CREATE TABLE CaixaSessao (
   fechado_em TIMESTAMP NULL DEFAULT NULL,
   PRIMARY KEY (id),
   KEY idx_caixa_empresa_estado (empresa_id, estado),
-  CONSTRAINT fk_caixa_empresa FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE CASCADE,
+  CONSTRAINT fk_caixa_empresa FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE RESTRICT,
   CONSTRAINT fk_caixa_usuario FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

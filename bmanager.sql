@@ -1,10 +1,7 @@
--- BManager: esquema completo para uma instalacao nova.
--- ATENCAO: este arquivo remove e recria a base bmanager.
--- Para uma base existente, use migracoes apropriadas em API/sql/.
-
-DROP DATABASE IF EXISTS bmanager;
-CREATE DATABASE bmanager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE bmanager;
+-- Vendai: esquema completo para uma instalação nova.
+-- Importe este arquivo dentro da base vazia selecionada.
+-- O script não apaga nem recria a base fornecida pelo serviço de hospedagem.
+-- Para uma base existente, use as migrações em API/sql/.
 
 CREATE TABLE Empresa (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -131,7 +128,7 @@ CREATE TABLE CaixaSessao (
   estado ENUM('aberto','fechado') NOT NULL DEFAULT 'aberto', aberto_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, fechado_em TIMESTAMP NULL DEFAULT NULL,
   caixa_aberto_empresa_id INT UNSIGNED GENERATED ALWAYS AS (CASE WHEN estado = 'aberto' THEN empresa_id ELSE NULL END) STORED,
   PRIMARY KEY (id), KEY idx_caixa_empresa_estado (empresa_id,estado), UNIQUE KEY uq_caixa_aberto_empresa (caixa_aberto_empresa_id),
-  CONSTRAINT fk_caixa_empresa FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE CASCADE,
+  CONSTRAINT fk_caixa_empresa FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE RESTRICT,
   CONSTRAINT fk_caixa_usuario FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -286,7 +283,7 @@ CREATE TABLE tickets_suporte (
   usuario_id INT UNSIGNED NOT NULL,
   assunto VARCHAR(150) NOT NULL,
   mensagem TEXT NOT NULL,
-  estado ENUM('aberto', 'em_andamento', 'fechado') NOT NULL DEFAULT 'aberto',
+  estado ENUM('aberto', 'em_andamento', 'resolvido', 'fechado') NOT NULL DEFAULT 'aberto',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -316,25 +313,10 @@ CREATE TABLE auditoria (
 
 INSERT INTO planos (nome, descricao, preco, tipo, limite_usuarios, limite_produtos)
 VALUES
-  ('Teste gratuito', 'Acesso experimental por 14 dias.', 0.00, 'mensal', 2, 50),
-  ('Basico mensal', 'Plano mensal para pequenas empresas.', 500.00, 'mensal', 5, 500),
-  ('Basico anual', 'Plano anual para pequenas empresas.', 5000.00, 'anual', 5, 500);
+  ('Teste gratuito', 'Experimente os recursos do Business durante 14 dias.', 0.00, 'mensal', 5, 1000000),
+  ('Starter', 'Para pequenos negócios que precisam de organização e controlo.', 500.00, 'mensal', 1, 1000000),
+  ('Business', 'Para empresas em crescimento que trabalham em equipa.', 1000.00, 'mensal', 5, 1000000),
+  ('Enterprise', 'Para empresas que precisam de maior capacidade e acompanhamento personalizado.', 3500.00, 'mensal', 15, 1000000);
 
--- Dados de demonstracao para acesso imediato ao sistema.
--- E-mail: edilson@gmail | Senha: e12345678E
-INSERT INTO Empresa (nome) VALUES ('Empresa Edilson');
-SET @empresa_demo_id = LAST_INSERT_ID();
-
-INSERT INTO Usuario (nome, email, senha, empresa_id, role)
-VALUES (
-  'Edilson',
-  'edilson@gmail',
-  '$2b$12$5VSOhxRBUdoaVHjSYXk56.wUWPZTfqfmb7gzc65olNtHLzFvS/qBy',
-  @empresa_demo_id,
-  'admin'
-);
-
-INSERT INTO assinaturas (empresa_id, plano_id, estado, inicia_em, expira_em)
-SELECT @empresa_demo_id, id, 'ativa', NOW(), DATE_ADD(NOW(), INTERVAL 1 MONTH)
-FROM planos
-WHERE nome = 'Basico mensal';
+-- Nenhum utilizador de demonstração é criado em produção.
+-- Crie o proprietário da plataforma com: npm run criar-dono

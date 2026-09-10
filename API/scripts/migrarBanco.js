@@ -40,6 +40,9 @@ const connection = await mysql.createConnection({
   user: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "",
   database,
+  ...(process.env.DB_SSL === "true"
+    ? { ssl: { minVersion: "TLSv1.2", rejectUnauthorized: true } }
+    : {}),
   multipleStatements: true,
 });
 
@@ -64,14 +67,18 @@ const colunaExiste = async (tabela, coluna) => {
 
 const validarBaseline = async () => {
   const tabelas = [
-    "Empresa", "Usuario", "Produto", "planos", "assinaturas", "pagamentos",
-    "notificacoes", "recuperacao_senha", "AdministradorPlataforma",
-    "tickets_suporte", "auditoria",
+    "Empresa", "Usuario", "AdministradorPlataforma", "Categoria", "Fornecedor",
+    "Produto", "Movimentos", "Cliente", "CaixaSessao", "Venda", "VendaItem",
+    "PagamentoVenda", "planos", "assinaturas", "pagamentos", "pagamento_eventos",
+    "notificacoes", "recuperacao_senha", "tickets_suporte", "auditoria",
   ];
   const colunas = [
     ["Empresa", "bloqueada"], ["Empresa", "nuit"], ["Empresa", "email"],
     ["Empresa", "telefone"], ["Empresa", "endereco"], ["Empresa", "session_version"],
-    ["Usuario", "token_version"], ["Produto", "estoque_minimo"],
+    ["Usuario", "token_version"], ["Produto", "estoque_minimo"], ["Produto", "codigo_barras"],
+    ["Movimentos", "preco_unitario"], ["Movimentos", "custo_unitario"],
+    ["Movimentos", "origem"], ["Movimentos", "motivo"], ["Movimentos", "venda_id"],
+    ["Venda", "cliente_nome"], ["CaixaSessao", "caixa_aberto_empresa_id"],
     ["assinaturas", "cancelada_em"], ["assinaturas", "cancelamento_agendado_em"],
     ["assinaturas", "plano_pendente_id"], ["tickets_suporte", "estado"],
   ];

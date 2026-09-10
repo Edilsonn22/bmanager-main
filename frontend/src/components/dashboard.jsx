@@ -407,6 +407,7 @@ function Dashboard() {
   return (
     <div
       className="
+        dashboard-page
         flex-1
         h-screen
         overflow-auto
@@ -447,7 +448,7 @@ function Dashboard() {
               sm:text-2xl
             "
           >
-            Visão geral do painel
+            Visão geral
           </h2>
 
           <p
@@ -458,9 +459,9 @@ function Dashboard() {
     sm:text-base
   "
           >
-            Bem vindo de volta,{" "}
+            Bem-vindo, {" "}
             <span className="font-semibold text-black">{usuario.nome}</span>!
-            Faça a gestão do seu estoque.
+            Acompanhe o stock e os movimentos da sua operação.
           </p>
         </div>
 
@@ -502,7 +503,7 @@ function Dashboard() {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            Movimentar
+            Novo movimento
           </button>
         </Link>
       </div>

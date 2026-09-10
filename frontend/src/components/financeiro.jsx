@@ -201,19 +201,19 @@ function Financeiro() {
 
 
   return (
-    <div className="flex-1 h-screen overflow-auto p-7 py-6 bg-gray-50">
+    <div className="financeiro-page flex-1 h-screen overflow-auto p-7 py-6 bg-gray-50">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-bold">Gestão Financeira</h2>
+          <h2 className="text-2xl font-bold">Visão financeira</h2>
 
           <p className="text-gray-700 text-sm sm:text-base">
-            Gerencie as finanças do seu negócio!
+            Acompanhe receitas, custos e resultados da sua operação.
           </p>
         </div>
 
         <Link to="/movimentar">
-          <button className="bg-black text-white px-3 py-2 rounded-lg hover:bg-black/70 transition flex items-center gap-2">
+          <button className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition flex items-center gap-2 font-semibold shadow-sm">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -227,7 +227,7 @@ function Financeiro() {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            Movimentar
+            Novo movimento
           </button>
         </Link>
       </div>
@@ -271,7 +271,7 @@ function Financeiro() {
       </div>
 
       {/* Demonstração de resultados */}
-      <div className="bg-white rounded-md p-5 text-gray-900 mb-7">
+      <div className="financeiro-panel bg-white rounded-md p-5 text-gray-900 mb-7">
         <h3 className="font-semibold text-gray-900">
           Demonstração de Resultados
         </h3>
@@ -339,7 +339,7 @@ function Financeiro() {
       </div>
 
       {/* Transações */}
-      <div className="bg-white rounded-md p-5">
+      <div className="financeiro-panel bg-white rounded-md p-5">
         <h2 className="font-semibold text-gray-900 mb-1">Transações</h2>
 
         <p className="text-gray-500 mb-7">
@@ -434,9 +434,13 @@ function Financeiro() {
                         </td>
 
                         <td className="p-4 text-center">
-                          <button className="text-gray-500 hover:text-black">
-                            Ver
-                          </button>
+                          <Link
+                            to={movimento.venda_id ? `/vendas/${movimento.venda_id}` : "/movimentos"}
+                            className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 font-semibold text-indigo-600 transition hover:bg-indigo-50 hover:text-indigo-800"
+                            aria-label={movimento.venda_id ? `Ver venda ${movimento.venda_id}` : "Ver movimento de stock"}
+                          >
+                            {movimento.venda_id ? "Ver venda" : "Ver movimento"}
+                          </Link>
                         </td>
                       </tr>
                     );

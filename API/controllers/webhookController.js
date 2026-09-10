@@ -15,7 +15,7 @@ const eventos = { "payment.completed": "payment.success", "payment.success": "pa
 
 export const receberDebito = async (req, res) => {
   const corpo = Buffer.isBuffer(req.body) ? req.body : Buffer.from("");
-  if (!assinaturaValida(corpo, req.get("X-Webhook-Signature"), getDebitoWebhookSecret())) return res.status(401).json({ sucesso: false, erro: "Assinatura do webhook inválida." });
+  if (!assinaturaValida(corpo, req.get("x-debitopay-signature"), getDebitoWebhookSecret())) return res.status(401).json({ sucesso: false, erro: "Assinatura do webhook inválida." });
   try {
     const payload = JSON.parse(corpo.toString("utf8"));
     const tipo = payload.event || payload.type;

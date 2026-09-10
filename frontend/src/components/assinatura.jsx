@@ -16,20 +16,23 @@ export default function Assinatura() {
   const [metodo, setMetodo] = useState("mpesa");
   const [telefone, setTelefone] = useState("");
   const [pagamentoPendente, setPagamentoPendente] = useState(null);
+  const [gatewayConfigurado, setGatewayConfigurado] = useState(false);
 
   const carregar = useCallback(async () => {
-    const [respostaPlanos, respostaAssinatura, respostaAcesso] = await Promise.all([
+    const [respostaPlanos, respostaAssinatura, respostaAcesso, respostaGateway] = await Promise.all([
       fetch(`${API_URL}/planos`),
       fetch(`${API_URL}/assinaturas/minha`),
       fetch(`${API_URL}/plataforma/acesso`),
+      fetch(`${API_URL}/pagamentos/configuracao`),
     ]);
-    const [dadosPlanos, dadosAssinatura, dadosAcesso] = await Promise.all([
-      respostaPlanos.json(), respostaAssinatura.json(), respostaAcesso.json(),
+    const [dadosPlanos, dadosAssinatura, dadosAcesso, dadosGateway] = await Promise.all([
+      respostaPlanos.json(), respostaAssinatura.json(), respostaAcesso.json(), respostaGateway.json(),
     ]);
-    if (!respostaPlanos.ok || !respostaAssinatura.ok) throw new Error(dadosPlanos.erro || dadosAssinatura.erro || "Não foi possível carregar os planos.");
+    if (!respostaPlanos.ok || !respostaAssinatura.ok || !respostaGateway.ok) throw new Error(dadosPlanos.erro || dadosAssinatura.erro || dadosGateway.erro || "Não foi possível carregar os planos.");
     setPlanos(dadosPlanos.planos || []);
     setAssinatura(dadosAssinatura.assinatura || null);
     setProprietario(Boolean(dadosAcesso.proprietario));
+    setGatewayConfigurado(Boolean(dadosGateway.gateway?.configurado));
   }, []);
 
   useEffect(() => {
@@ -47,7 +50,10 @@ export default function Assinatura() {
         body: JSON.stringify({ planoId, method: metodo, phone: telefone }),
       });
       const dados = await resposta.json();
-      if (!resposta.ok) throw new Error(dados.erro || "Não foi possível iniciar o pagamento.");
+      if (!resposta.ok) {
+        const detalhe = import.meta.env.DEV && dados.detalhe_tecnico ? ` (${dados.detalhe_tecnico})` : "";
+        throw new Error(`${dados.erro || "Não foi possível iniciar o pagamento."}${detalhe}`);
+      }
       if (!dados.pagamento?.id) throw new Error("A Débito não devolveu a referência do pagamento.");
       if (dados.pagamento.checkout_url) return window.location.assign(dados.pagamento.checkout_url);
       setPagamentoPendente(dados.pagamento);
@@ -147,6 +153,7 @@ export default function Assinatura() {
       )}
       {mensagem && <p className="mt-4 rounded-xl bg-green-50 p-4 text-green-800">{mensagem}</p>}
       {erro && <p className="mt-4 rounded-xl bg-red-50 p-4 text-red-700">{erro}</p>}
+      {!gatewayConfigurado && <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Os pagamentos online ainda estão em configuração. Os planos podem ser consultados, mas a cobrança está temporariamente indisponível.</p>}
 
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         {planos.map((plano) => {
@@ -158,7 +165,7 @@ export default function Assinatura() {
             <p className="mt-2 min-h-12 text-gray-600">{plano.descricao}</p>
             <p className="mt-5 text-3xl font-bold text-indigo-600">{Number(plano.valor).toLocaleString("pt-MZ", { style: "currency", currency: "MZN" })}</p>
             <p className="text-sm text-gray-500">por {plano.periodo_meses} {plano.periodo_meses === 1 ? "mês" : "meses"}</p>
-            <button type="button" disabled={atual || processando !== null} onClick={() => downgrade ? agendarDowngrade(plano.id) : setPlanoPagamento(plano)} className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">{processando === plano.id ? "A processar…" : texto}</button>
+            <button type="button" disabled={atual || processando !== null || (!downgrade && !gatewayConfigurado)} onClick={() => downgrade ? agendarDowngrade(plano.id) : setPlanoPagamento(plano)} className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60">{processando === plano.id ? "A processar…" : (!downgrade && !gatewayConfigurado) ? "Pagamento indisponível" : texto}</button>
           </section>;
         })}
       </div>

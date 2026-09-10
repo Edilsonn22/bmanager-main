@@ -3,7 +3,7 @@ import pool from "../config/db.js";
 export const listar = async (_req, res) => {
   try {
     const [planos] = await pool.query(
-      `SELECT id, nome, descricao, preco AS valor, tipo,
+      `SELECT id, nome, descricao, preco AS valor, tipo, limite_usuarios, limite_produtos,
               CASE tipo WHEN 'mensal' THEN 1 WHEN 'anual' THEN 12 ELSE NULL END AS periodo_meses
        FROM planos WHERE ativo = 1 ORDER BY preco ASC`
     );

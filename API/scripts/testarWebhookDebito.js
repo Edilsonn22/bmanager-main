@@ -14,7 +14,7 @@ const response = await fetch(callbackUrl, {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "X-Webhook-Signature": `sha256=${signature}`,
+    "x-debitopay-signature": signature,
   },
   body: payload,
   signal: AbortSignal.timeout(20_000),

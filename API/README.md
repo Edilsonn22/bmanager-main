@@ -89,7 +89,7 @@ Todas as consultas são isoladas por `empresa_id`; nunca envie esse campo a part
 | POST | `/assinaturas/reativar` | Desfaz o cancelamento agendado. |
 | GET | `/historico-pagamentos` | Lista pagamentos da empresa. |
 | GET | `/historico-pagamentos/:id/fatura` | Dados da fatura da empresa autenticada. |
-| POST | `/webhooks/debito` | Webhook público; valida HMAC SHA-256 no cabeçalho `X-Webhook-Signature`. |
+| POST | `/webhooks/debito` | Webhook público; valida HMAC SHA-256 no cabeçalho `x-debitopay-signature`. |
 
 Um upgrade ou renovação é confirmado apenas pelo webhook `payment.success`. Não marque pagamentos como pagos pelo frontend.
 

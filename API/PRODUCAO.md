@@ -1,6 +1,6 @@
 # Preparação para produção
 
-1. Defina `NODE_ENV=production`, um `JWT_SECRET` longo, `DEBITO_API_TOKEN`, `DEBITO_WALLET_ID`, `CLIENT_URL` e `PLATFORM_ADMIN_EMAILS` no ambiente de produção. Nunca envie o arquivo `.env` ao Git.
+1. Defina `NODE_ENV=production`, um `JWT_SECRET` longo, `DEBITO_API_TOKEN`, `DEBITO_MERCHANT_ID`, `DEBITO_WALLET_CODE`, `CLIENT_URL` e `PLATFORM_ADMIN_EMAILS` no ambiente de produção. Nunca envie o arquivo `.env` ao Git.
 2. Publique a API atrás de um proxy HTTPS (Nginx, Caddy ou provedor de cloud) e configure o callback público quando o provedor o exigir.
 3. Agende backups diários do MySQL e teste regularmente a restauração:
 

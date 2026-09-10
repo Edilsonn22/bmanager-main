@@ -19,6 +19,11 @@ test("produção rejeita segredo fraco e URL sem HTTPS", () => {
     SMTP_USER: "utilizador",
     SMTP_PASSWORD: "senha-smtp",
     EMAIL_FROM: "Vendai <no-reply@exemplo.com>",
+    DEBITO_API_TOKEN: "token-seguro",
+    DEBITO_MERCHANT_ID: "merchant-uuid",
+    DEBITO_WALLET_CODE: "wallet-mzn",
+    DEBITO_WEBHOOK_SECRET: "segredo-webhook",
+    DEBITO_CALLBACK_URL: "https://api.exemplo.com/api/webhooks/debito",
   };
   assert.throws(() => validarAmbienteProducao(base), /JWT_SECRET/);
   assert.throws(() => validarAmbienteProducao({ ...base, JWT_SECRET: "a".repeat(48) }), /HTTPS/);
@@ -37,5 +42,26 @@ test("produção aceita configuração essencial segura", () => {
     SMTP_USER: "utilizador",
     SMTP_PASSWORD: "senha-smtp",
     EMAIL_FROM: "Vendai <no-reply@exemplo.com>",
+    DEBITO_API_TOKEN: "token-seguro",
+    DEBITO_MERCHANT_ID: "merchant-uuid",
+    DEBITO_WALLET_CODE: "wallet-mzn",
+    DEBITO_WEBHOOK_SECRET: "segredo-webhook",
+    DEBITO_CALLBACK_URL: "https://api.exemplo.com/api/webhooks/debito",
   }));
+});
+
+test("produção exige configuração completa do gateway", () => {
+  assert.throws(() => validarAmbienteProducao({
+    NODE_ENV: "production",
+    CLIENT_URL: "https://app.exemplo.com",
+    JWT_SECRET: "a7f0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8",
+    DB_HOST: "database",
+    DB_USER: "app",
+    DB_PASSWORD: "senha-forte",
+    DB_NAME: "bmanager",
+    SMTP_HOST: "smtp.exemplo.com",
+    SMTP_USER: "utilizador",
+    SMTP_PASSWORD: "senha-smtp",
+    EMAIL_FROM: "Vendai <no-reply@exemplo.com>",
+  }), /DEBITO/);
 });
