@@ -8,6 +8,7 @@ function RegistarMovimento() {
 
   const [produtos, setProdutos] = useState([]);
   const [produtoSelecionado, setProdutoSelecionado] = useState("");
+  const [apresentacaoSelecionada, setApresentacaoSelecionada] = useState("");
   const [quantidade, setQuantidade] = useState("");
   const [tipoMovimento, setTipoMovimento] = useState("");
   const [motivo, setMotivo] = useState("");
@@ -53,7 +54,9 @@ function RegistarMovimento() {
       setErro("O produto selecionado é inválido."); return;
     }
 
-    if (tipoMovimento === "Saida" && Number(quantidade) > produto.quantidade) {
+    const apresentacao = produto.apresentacoes?.find((a) => a.id === Number(apresentacaoSelecionada));
+    const quantidadeBase = Number(quantidade) * Number(apresentacao?.fator_conversao || 1);
+    if (tipoMovimento === "Saida" && quantidadeBase > produto.quantidade) {
       setErro("A quantidade é maior do que o stock disponível."); return;
     }
 
@@ -63,6 +66,7 @@ function RegistarMovimento() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id_Produto: Number(produto.id),                  
+          apresentacao_id: apresentacao?.id || null,
           tipo: tipoMovimento.toLowerCase(),       
           quantidade: Number(quantidade),  
           motivo: motivo.trim() || undefined,
@@ -75,6 +79,7 @@ function RegistarMovimento() {
         setMensagem(`${tipoMovimento === "Entrada" ? "Entrada" : "Saída"} registada com sucesso.`);
 
         setProdutoSelecionado("");
+        setApresentacaoSelecionada("");
         setQuantidade("");
         setTipoMovimento("");
         setMotivo("");
@@ -110,7 +115,7 @@ function RegistarMovimento() {
               <label className="block text-gray-700 mb-2">Produto:</label>
               <select
                 value={produtoSelecionado}
-                onChange={(e) => setProdutoSelecionado(e.target.value)}
+                onChange={(e) => { setProdutoSelecionado(e.target.value); setApresentacaoSelecionada(""); }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
               >
                 <option value="">{loading ? "A carregar produtos..." : "Selecione o produto"}</option>
@@ -121,6 +126,7 @@ function RegistarMovimento() {
                 ))}
               </select>
             </div>
+            {produtoSelecionado && (() => { const p = produtos.find((item) => item.id === Number(produtoSelecionado)); return <div><label className="block text-gray-700 mb-2">Movimentar por:</label><select value={apresentacaoSelecionada} onChange={(e) => setApresentacaoSelecionada(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-2"><option value="">{p?.unidade_base || "Unidade"}</option>{p?.apresentacoes?.map((a) => <option key={a.id} value={a.id}>{a.nome} (1 = {a.fator_conversao} {p.unidade_base || "unidades"})</option>)}</select></div>; })()}
             {tipoMovimento === "Saida" && <div><label className="block text-gray-700 mb-2">Motivo da saída:</label><select value={motivo} onChange={(e)=>setMotivo(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-2" required><option value="">Selecione o motivo</option><option>Produto danificado</option><option>Produto expirado</option><option>Uso interno</option><option>Oferta ou amostra</option><option>Ajuste de inventário</option><option>Devolução ao fornecedor</option><option>Outro</option></select><p className="mt-1 text-xs text-slate-500">Esta saída reduz o stock, mas não entra no faturamento.</p></div>}
 
             {/* Tipo de movimento */}

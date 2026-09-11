@@ -17,6 +17,7 @@ import suporteRoutes from "./routes/suporteRoutes.js";
 import vendaRoutes from "./routes/vendaRoutes.js";
 import clienteRoutes from "./routes/clienteRoutes.js";
 import caixaRoutes from "./routes/caixaRoutes.js";
+import scannerRoutes from "./routes/scannerRoutes.js";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import { validarCorpoJson } from "./middlewares/validation.js";
@@ -61,6 +62,7 @@ export function createApp() {
   app.use("/api/vendas", vendaRoutes);
   app.use("/api/clientes", clienteRoutes);
   app.use("/api/caixa", caixaRoutes);
+  app.use("/api/scanner", scannerRoutes);
 
   app.use((error, _req, res, _next) => {
     console.error("Erro não tratado na API:", error);

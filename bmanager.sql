@@ -76,6 +76,8 @@ CREATE TABLE Produto (
   idFornecedor INT UNSIGNED NOT NULL,
   quantidade INT NOT NULL DEFAULT 0,
   estoque_minimo INT NOT NULL DEFAULT 5,
+  tipo_produto ENUM('simples','multiplas') NOT NULL DEFAULT 'simples',
+  unidade_base VARCHAR(50) NOT NULL DEFAULT 'Unidade',
   PRIMARY KEY (id),
   KEY idx_produto_empresa (empresa_id),
   KEY idx_produto_categoria (idCategoria),
@@ -107,6 +109,26 @@ CREATE TABLE Movimentos (
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_movimentos_produto FOREIGN KEY (id_Produto) REFERENCES Produto(id)
     ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ProdutoApresentacao (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  produto_id INT UNSIGNED NOT NULL,
+  nome VARCHAR(50) NOT NULL,
+  fator_conversao INT UNSIGNED NOT NULL,
+  preco DECIMAL(12,2) NOT NULL,
+  custo DECIMAL(12,2) NOT NULL,
+  codigo_barras VARCHAR(100) DEFAULT NULL,
+  vendavel BOOLEAN NOT NULL DEFAULT TRUE,
+  ativa BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_produto_apresentacao_nome (produto_id, nome),
+  UNIQUE KEY uq_apresentacao_codigo (codigo_barras),
+  CONSTRAINT fk_apresentacao_produto FOREIGN KEY (produto_id) REFERENCES Produto(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT chk_apresentacao_fator CHECK (fator_conversao > 1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE Cliente (
@@ -148,10 +170,13 @@ CREATE TABLE Venda (
 CREATE TABLE VendaItem (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT, venda_id INT UNSIGNED NOT NULL, produto_id INT UNSIGNED NOT NULL,
   nome_produto VARCHAR(255) NOT NULL, quantidade INT UNSIGNED NOT NULL, quantidade_devolvida INT UNSIGNED NOT NULL DEFAULT 0,
+  apresentacao_id INT UNSIGNED DEFAULT NULL, apresentacao_nome VARCHAR(50) NOT NULL DEFAULT 'Unidade',
+  fator_conversao INT UNSIGNED NOT NULL DEFAULT 1, quantidade_base INT UNSIGNED NOT NULL,
   preco_unitario DECIMAL(12,2) NOT NULL, custo_unitario DECIMAL(12,2) NOT NULL, total DECIMAL(12,2) NOT NULL,
   PRIMARY KEY (id), KEY idx_venda_item_venda (venda_id),
   CONSTRAINT fk_venda_item_venda FOREIGN KEY (venda_id) REFERENCES Venda(id) ON DELETE CASCADE,
-  CONSTRAINT fk_venda_item_produto FOREIGN KEY (produto_id) REFERENCES Produto(id) ON DELETE RESTRICT
+  CONSTRAINT fk_venda_item_produto FOREIGN KEY (produto_id) REFERENCES Produto(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_venda_item_apresentacao FOREIGN KEY (apresentacao_id) REFERENCES ProdutoApresentacao(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE PagamentoVenda (
@@ -309,6 +334,22 @@ CREATE TABLE auditoria (
     ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_auditoria_usuario FOREIGN KEY (usuario_id) REFERENCES Usuario(id)
     ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ScannerSessao (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, empresa_id INT UNSIGNED NOT NULL, usuario_id INT UNSIGNED NOT NULL,
+  token_hash CHAR(64) NOT NULL, expira_em DATETIME NOT NULL, ativa BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY uq_scanner_token (token_hash),
+  KEY idx_scanner_empresa (empresa_id,ativa,expira_em),
+  CONSTRAINT fk_scanner_empresa FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE CASCADE,
+  CONSTRAINT fk_scanner_usuario FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ScannerCodigo (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, sessao_id BIGINT UNSIGNED NOT NULL, codigo VARCHAR(100) NOT NULL,
+  consumido BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id), KEY idx_scanner_codigo (sessao_id,consumido,id),
+  CONSTRAINT fk_scanner_codigo_sessao FOREIGN KEY (sessao_id) REFERENCES ScannerSessao(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO planos (nome, descricao, preco, tipo, limite_usuarios, limite_produtos)

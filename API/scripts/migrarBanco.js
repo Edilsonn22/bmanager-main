@@ -68,17 +68,21 @@ const colunaExiste = async (tabela, coluna) => {
 const validarBaseline = async () => {
   const tabelas = [
     "Empresa", "Usuario", "AdministradorPlataforma", "Categoria", "Fornecedor",
-    "Produto", "Movimentos", "Cliente", "CaixaSessao", "Venda", "VendaItem",
+    "Produto", "ProdutoApresentacao", "Movimentos", "Cliente", "CaixaSessao", "Venda", "VendaItem",
     "PagamentoVenda", "planos", "assinaturas", "pagamentos", "pagamento_eventos",
     "notificacoes", "recuperacao_senha", "tickets_suporte", "auditoria",
+    "ScannerSessao", "ScannerCodigo",
   ];
   const colunas = [
     ["Empresa", "bloqueada"], ["Empresa", "nuit"], ["Empresa", "email"],
     ["Empresa", "telefone"], ["Empresa", "endereco"], ["Empresa", "session_version"],
     ["Usuario", "token_version"], ["Produto", "estoque_minimo"], ["Produto", "codigo_barras"],
+    ["Produto", "tipo_produto"], ["Produto", "unidade_base"],
     ["Movimentos", "preco_unitario"], ["Movimentos", "custo_unitario"],
     ["Movimentos", "origem"], ["Movimentos", "motivo"], ["Movimentos", "venda_id"],
-    ["Venda", "cliente_nome"], ["CaixaSessao", "caixa_aberto_empresa_id"],
+    ["Venda", "cliente_nome"], ["VendaItem", "apresentacao_nome"],
+    ["VendaItem", "fator_conversao"], ["VendaItem", "quantidade_base"],
+    ["CaixaSessao", "caixa_aberto_empresa_id"],
     ["assinaturas", "cancelada_em"], ["assinaturas", "cancelamento_agendado_em"],
     ["assinaturas", "plano_pendente_id"], ["tickets_suporte", "estado"],
   ];

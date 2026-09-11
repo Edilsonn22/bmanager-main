@@ -12,22 +12,34 @@ export async function criarVenda(req, res) {
     if (!Array.isArray(itens) || !itens.length) return res.status(400).json({ sucesso: false, erro: "Adicione pelo menos um produto." });
     if (!FORMAS.has(forma_pagamento)) return res.status(400).json({ sucesso: false, erro: "Forma de pagamento inválida." });
     if (forma_pagamento === "credito" && !cliente_id) return res.status(400).json({ sucesso: false, erro: "Selecione um cliente para uma venda a crédito." });
-    const normalizados = itens.map((item) => ({ produtoId: Number(item.produto_id), quantidade: Number(item.quantidade) }));
+    const normalizados = itens.map((item) => ({ produtoId: Number(item.produto_id), apresentacaoId: item.apresentacao_id ? Number(item.apresentacao_id) : null, quantidade: Number(item.quantidade) }));
     if (normalizados.some((item) => !Number.isInteger(item.produtoId) || !Number.isInteger(item.quantidade) || item.quantidade <= 0)) return res.status(400).json({ sucesso: false, erro: "Existem itens inválidos na venda." });
 
     await connection.beginTransaction();
     const [[caixa]] = await connection.query("SELECT id, usuario_id FROM CaixaSessao WHERE empresa_id = ? AND estado = 'aberto' ORDER BY id DESC LIMIT 1 FOR UPDATE", [empresaId]);
     if (!caixa) throw Object.assign(new Error("Abra o caixa antes de realizar uma venda."), { status: 409 });
+    const chaves = new Set(normalizados.map((item) => `${item.produtoId}:${item.apresentacaoId || "base"}`));
+    if (chaves.size !== normalizados.length) throw Object.assign(new Error("A mesma apresentação aparece mais de uma vez no carrinho."), { status: 400 });
     const ids = [...new Set(normalizados.map((item) => item.produtoId))];
-    if (ids.length !== normalizados.length) throw Object.assign(new Error("Um produto aparece mais de uma vez no carrinho."), { status: 400 });
     const placeholders = ids.map(() => "?").join(",");
-    const [produtos] = await connection.query(`SELECT id, nome, quantidade, preco, precoFornecedor FROM Produto WHERE empresa_id = ? AND id IN (${placeholders}) FOR UPDATE`, [empresaId, ...ids]);
+    const [produtos] = await connection.query(`SELECT id, nome, quantidade, preco, precoFornecedor, unidade_base FROM Produto WHERE empresa_id = ? AND id IN (${placeholders}) FOR UPDATE`, [empresaId, ...ids]);
     if (produtos.length !== ids.length) throw Object.assign(new Error("Um dos produtos não existe."), { status: 404 });
+    const [apresentacoes] = await connection.query(`SELECT pa.* FROM ProdutoApresentacao pa INNER JOIN Produto p ON p.id=pa.produto_id WHERE p.empresa_id=? AND pa.produto_id IN (${placeholders}) AND pa.ativa=TRUE AND pa.vendavel=TRUE`, [empresaId, ...ids]);
     const detalhes = normalizados.map((item) => {
       const produto = produtos.find((p) => Number(p.id) === item.produtoId);
-      if (item.quantidade > Number(produto.quantidade)) throw Object.assign(new Error(`Stock insuficiente para ${produto.nome}. Disponível: ${produto.quantidade}.`), { status: 409 });
-      return { ...item, produto, preco: dinheiro(produto.preco), custo: dinheiro(produto.precoFornecedor), total: dinheiro(item.quantidade * produto.preco) };
+      const apresentacao = item.apresentacaoId ? apresentacoes.find((p) => Number(p.id) === item.apresentacaoId && Number(p.produto_id) === item.produtoId) : null;
+      if (item.apresentacaoId && !apresentacao) throw Object.assign(new Error(`A apresentação selecionada para ${produto.nome} não existe.`), { status: 400 });
+      const fator = apresentacao ? Number(apresentacao.fator_conversao) : 1;
+      const quantidadeBase = item.quantidade * fator;
+      if (quantidadeBase > Number(produto.quantidade)) throw Object.assign(new Error(`Stock insuficiente para ${produto.nome}. Disponível: ${produto.quantidade} unidade(s) base.`), { status: 409 });
+      const preco = dinheiro(apresentacao?.preco ?? produto.preco);
+      const custo = dinheiro(apresentacao?.custo ?? produto.precoFornecedor);
+      return { ...item, produto, apresentacao, fator, quantidadeBase, preco, custo, precoBase: dinheiro(preco / fator), custoBase: dinheiro(custo / fator), total: dinheiro(item.quantidade * preco) };
     });
+    for (const produto of produtos) {
+      const solicitado = detalhes.filter((item) => item.produtoId === Number(produto.id)).reduce((total, item) => total + item.quantidadeBase, 0);
+      if (solicitado > Number(produto.quantidade)) throw Object.assign(new Error(`Stock insuficiente para ${produto.nome}. Disponível: ${produto.quantidade} unidade(s) base.`), { status: 409 });
+    }
     const subtotal = dinheiro(detalhes.reduce((soma, item) => soma + item.total, 0));
     const descontoFinal = dinheiro(desconto);
     if (descontoFinal < 0 || descontoFinal > subtotal) throw Object.assign(new Error("Desconto inválido."), { status: 400 });
@@ -44,9 +56,9 @@ export async function criarVenda(req, res) {
     const [[sequencia]] = await connection.query("SELECT COALESCE(MAX(numero), 0) + 1 AS numero FROM Venda WHERE empresa_id = ? FOR UPDATE", [empresaId]);
     const [vendaResult] = await connection.execute("INSERT INTO Venda (empresa_id, cliente_id, cliente_nome, usuario_id, caixa_sessao_id, numero, subtotal, desconto, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [empresaId, cliente_id || null, clienteNomeFinal, req.user.id, caixa?.id || null, sequencia.numero, subtotal, descontoFinal, total]);
     for (const item of detalhes) {
-      await connection.execute("INSERT INTO VendaItem (venda_id, produto_id, nome_produto, quantidade, preco_unitario, custo_unitario, total) VALUES (?, ?, ?, ?, ?, ?, ?)", [vendaResult.insertId, item.produtoId, item.produto.nome, item.quantidade, item.preco, item.custo, item.total]);
-      await connection.execute("UPDATE Produto SET quantidade = quantidade - ? WHERE id = ? AND empresa_id = ?", [item.quantidade, item.produtoId, empresaId]);
-      await connection.execute("INSERT INTO Movimentos (id_Produto, empresa_id, tipo, quantidade, preco_unitario, custo_unitario, origem, motivo, venda_id) VALUES (?, ?, 'saida', ?, ?, ?, 'venda', 'Venda', ?)", [item.produtoId, empresaId, item.quantidade, item.preco, item.custo, vendaResult.insertId]);
+      await connection.execute(`INSERT INTO VendaItem (venda_id,produto_id,nome_produto,quantidade,preco_unitario,custo_unitario,total,apresentacao_id,apresentacao_nome,fator_conversao,quantidade_base) VALUES (?,?,?,?,?,?,?,?,?,?,?)`, [vendaResult.insertId, item.produtoId, item.produto.nome, item.quantidade, item.preco, item.custo, item.total, item.apresentacaoId, item.apresentacao?.nome || item.produto.unidade_base || "Unidade", item.fator, item.quantidadeBase]);
+      await connection.execute("UPDATE Produto SET quantidade=quantidade-? WHERE id=? AND empresa_id=?", [item.quantidadeBase, item.produtoId, empresaId]);
+      await connection.execute("INSERT INTO Movimentos (id_Produto,empresa_id,tipo,quantidade,preco_unitario,custo_unitario,origem,motivo,venda_id) VALUES (?,?,'saida',?,?,?,'venda',?,?)", [item.produtoId, empresaId, item.quantidadeBase, item.precoBase, item.custoBase, `Venda em ${item.apresentacao?.nome || item.produto.unidade_base || "Unidade"}`, vendaResult.insertId]);
     }
     const recebido = forma_pagamento === "dinheiro" ? dinheiro(valor_recebido) : total;
     const troco = forma_pagamento === "dinheiro" ? dinheiro(recebido - total) : 0;
@@ -81,8 +93,9 @@ export async function cancelarVenda(req, res) {
     if (venda.estado !== "concluida") throw Object.assign(new Error("Somente vendas concluídas podem ser canceladas."), { status: 409 });
     const [itens] = await connection.query("SELECT * FROM VendaItem WHERE venda_id=?", [venda.id]);
     for (const item of itens) {
-      await connection.execute("UPDATE Produto SET quantidade=quantidade+? WHERE id=? AND empresa_id=?", [item.quantidade, item.produto_id, req.user.empresa_id]);
-      await connection.execute("INSERT INTO Movimentos (id_Produto, empresa_id, tipo, quantidade, preco_unitario, custo_unitario, origem, motivo, venda_id) VALUES (?, ?, 'entrada', ?, ?, ?, 'cancelamento', 'Cancelamento de venda', ?)", [item.produto_id, req.user.empresa_id, item.quantidade, item.preco_unitario, item.custo_unitario, venda.id]);
+      const quantidadeBase = Number(item.quantidade_base || item.quantidade);
+      await connection.execute("UPDATE Produto SET quantidade=quantidade+? WHERE id=? AND empresa_id=?", [quantidadeBase, item.produto_id, req.user.empresa_id]);
+      await connection.execute("INSERT INTO Movimentos (id_Produto, empresa_id, tipo, quantidade, preco_unitario, custo_unitario, origem, motivo, venda_id) VALUES (?, ?, 'entrada', ?, ?, ?, 'cancelamento', 'Cancelamento de venda', ?)", [item.produto_id, req.user.empresa_id, quantidadeBase, dinheiro(item.preco_unitario / Number(item.fator_conversao || 1)), dinheiro(item.custo_unitario / Number(item.fator_conversao || 1)), venda.id]);
     }
     await connection.execute("UPDATE Venda SET estado='cancelada', cancelada_em=CURRENT_TIMESTAMP WHERE id=?", [venda.id]);
     await connection.commit();
@@ -104,8 +117,9 @@ export async function devolverItem(req, res) {
     const restante = Number(item.quantidade) - Number(item.quantidade_devolvida);
     if (quantidade > restante) throw Object.assign(new Error(`Só é possível devolver ${restante} unidade(s).`), { status: 409 });
     await connection.execute("UPDATE VendaItem SET quantidade_devolvida=quantidade_devolvida+? WHERE id=?", [quantidade, item.id]);
-    await connection.execute("UPDATE Produto SET quantidade=quantidade+? WHERE id=? AND empresa_id=?", [quantidade, item.produto_id, req.user.empresa_id]);
-    await connection.execute("INSERT INTO Movimentos (id_Produto,empresa_id,tipo,quantidade,preco_unitario,custo_unitario,origem,motivo,venda_id) VALUES (?,?,'entrada',?,?,?,'devolucao','Devolução de cliente',?)", [item.produto_id, req.user.empresa_id, quantidade, item.preco_unitario, item.custo_unitario, venda.id]);
+    const quantidadeBase = quantidade * Number(item.fator_conversao || 1);
+    await connection.execute("UPDATE Produto SET quantidade=quantidade+? WHERE id=? AND empresa_id=?", [quantidadeBase, item.produto_id, req.user.empresa_id]);
+    await connection.execute("INSERT INTO Movimentos (id_Produto,empresa_id,tipo,quantidade,preco_unitario,custo_unitario,origem,motivo,venda_id) VALUES (?,?,'entrada',?,?,?,'devolucao','Devolução de cliente',?)", [item.produto_id, req.user.empresa_id, quantidadeBase, dinheiro(item.preco_unitario / Number(item.fator_conversao || 1)), dinheiro(item.custo_unitario / Number(item.fator_conversao || 1)), venda.id]);
     const [[resumo]] = await connection.query("SELECT SUM(quantidade) AS total, SUM(quantidade_devolvida) AS devolvido FROM VendaItem WHERE venda_id=?", [venda.id]);
     const estado = Number(resumo.total) === Number(resumo.devolvido) ? "devolvida" : "parcialmente_devolvida";
     await connection.execute("UPDATE Venda SET estado=? WHERE id=?", [estado, venda.id]);

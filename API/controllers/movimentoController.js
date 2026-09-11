@@ -16,7 +16,8 @@ export const createMovimento = async (req, res) => {
       id_Produto,
       tipo,
       quantidade,
-      motivo
+      motivo,
+      apresentacao_id
     } = req.body;
 
 
@@ -90,7 +91,8 @@ export const createMovimento = async (req, res) => {
         quantidade,
         estoque_minimo,
         preco,
-        precoFornecedor
+        precoFornecedor,
+        unidade_base
       FROM Produto
       WHERE id = ?
       AND empresa_id = ?
@@ -116,6 +118,20 @@ export const createMovimento = async (req, res) => {
 
 
     const produto = produtos[0];
+    let apresentacao = null;
+    if (apresentacao_id) {
+      const [[encontrada]] = await connection.query(
+        "SELECT id,nome,fator_conversao,preco,custo FROM ProdutoApresentacao WHERE id=? AND produto_id=? AND ativa=TRUE",
+        [apresentacao_id, id_Produto],
+      );
+      if (!encontrada) {
+        await connection.rollback();
+        return res.status(400).json({ sucesso: false, erro: "A apresentação selecionada é inválida." });
+      }
+      apresentacao = encontrada;
+    }
+    const fator = Number(apresentacao?.fator_conversao || 1);
+    const qtdBase = qtd * fator;
 
 
     // =================================================
@@ -124,7 +140,7 @@ export const createMovimento = async (req, res) => {
 
     if (
       tipo === "saida" &&
-      qtd > Number(produto.quantidade)
+      qtdBase > Number(produto.quantidade)
     ) {
 
       await connection.rollback();
@@ -144,8 +160,8 @@ export const createMovimento = async (req, res) => {
 
     const novaQuantidade =
       tipo === "entrada"
-        ? Number(produto.quantidade) + qtd
-        : Number(produto.quantidade) - qtd;
+        ? Number(produto.quantidade) + qtdBase
+        : Number(produto.quantidade) - qtdBase;
 
 
     // =================================================
@@ -189,10 +205,10 @@ export const createMovimento = async (req, res) => {
         id_Produto,
         empresa_id,
         tipo,
-        qtd,
-        produto.preco,
-        produto.precoFornecedor,
-        tipo === "saida" ? (motivo?.trim() || "Saída manual") : (motivo?.trim() || "Entrada manual")
+        qtdBase,
+        Number(apresentacao?.preco || produto.preco) / fator,
+        Number(apresentacao?.custo || produto.precoFornecedor) / fator,
+        `${tipo === "saida" ? (motivo?.trim() || "Saída manual") : (motivo?.trim() || "Entrada manual")} (${qtd} ${apresentacao?.nome || produto.unidade_base || "Unidade"})`
       ]
     );
 
@@ -202,7 +218,7 @@ export const createMovimento = async (req, res) => {
     // =================================================
 
     await connection.commit();
-    await auditar({ empresaId: empresa_id, usuarioId: req.user.id, acao: "criar", entidade: "movimento", entidadeId: result.insertId, detalhes: { produto: produto.id, tipo, quantidade: qtd } });
+    await auditar({ empresaId: empresa_id, usuarioId: req.user.id, acao: "criar", entidade: "movimento", entidadeId: result.insertId, detalhes: { produto: produto.id, tipo, quantidade: qtd, quantidade_base: qtdBase, apresentacao: apresentacao?.nome || produto.unidade_base } });
     if (novaQuantidade === 0 || novaQuantidade <= Number(produto.estoque_minimo)) {
       criarNotificacao({ empresaId: empresa_id, tipo: novaQuantidade === 0 ? "estoque_esgotado" : "estoque_baixo", titulo: novaQuantidade === 0 ? "Produto esgotado" : "Estoque baixo", mensagem: `${produto.nome}: restam ${novaQuantidade} unidades.` }).catch((error) => console.error("Erro no alerta de estoque:", error.message));
     }

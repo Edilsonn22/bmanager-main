@@ -37,6 +37,7 @@ const Vendas = lazy(() => import("./components/vendas"));
 const DetalheVenda = lazy(() => import("./components/detalheVenda"));
 const Clientes = lazy(() => import("./components/clientes"));
 const Caixa = lazy(() => import("./components/caixa"));
+const ScannerMobile = lazy(() => import("./components/scannerMobile"));
 
 function Layout() {
   const { usuario } = useAuth();
@@ -52,6 +53,7 @@ export default function App() {
     <Route path="/login" element={<Login />} />
     <Route path="/registo" element={<Register />} />
     <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+    <Route path="/scanner/:token" element={<ScannerMobile />} />
     <Route path="/redefinir-senha" element={<RecuperarSenha />} />
     <Route element={<ProtectedRoute />}><Route element={<Layout />}>
       <Route element={<ModuleRoute modulo="estoque" />}>

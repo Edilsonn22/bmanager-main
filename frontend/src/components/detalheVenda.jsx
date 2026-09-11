@@ -236,7 +236,7 @@ export default function DetalheVenda() {
                     return (
                       <tr key={item.id}>
                         <td className="break-words font-semibold text-slate-800">
-                          {item.nome_produto}
+                          {item.nome_produto}<small className="block font-normal text-indigo-600">{item.apresentacao_nome || "Unidade"}</small>
                         </td>
                         <td className="text-center">
                           {item.quantidade}
@@ -286,7 +286,7 @@ export default function DetalheVenda() {
                   >
                     <div className="flex min-w-0 items-start justify-between gap-3">
                       <h3 className="min-w-0 break-words font-bold text-slate-800">
-                        {item.nome_produto}
+                        {item.nome_produto}<small className="block font-normal text-indigo-600">{item.apresentacao_nome || "Unidade"}</small>
                       </h3>
                       <strong className="shrink-0 text-sm">
                         × {item.quantidade}
@@ -359,12 +359,17 @@ export default function DetalheVenda() {
           </footer>
         </section>
         {podeEstornar && venda.estado === "concluida" && (
-          <div className="mt-4 flex justify-end print:hidden">
+          <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50/60 p-4 print:hidden sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-bold text-red-800">Precisa anular esta venda?</p>
+              <p className="mt-0.5 text-xs text-red-600">O stock dos produtos será reposto automaticamente.</p>
+            </div>
             <button
               type="button"
               onClick={() => setConfirmar(true)}
-              className="rounded-xl px-4 py-2.5 font-semibold text-red-600 transition hover:bg-red-50"
+              className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 font-semibold text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-200 sm:w-auto"
             >
+              <RotateCcw size={17} />
               Cancelar venda
             </button>
           </div>

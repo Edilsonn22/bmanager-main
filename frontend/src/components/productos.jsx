@@ -24,9 +24,11 @@ function Productos() {
 
 
 
-   const formatarMzn = (valor) => {
-    return `${Number(valor || 0).toLocaleString("pt-MZ")}`;
-  };
+  const formatarMzn = (valor) =>
+    `${Number(valor || 0).toLocaleString("pt-MZ", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} MZN`;
 
   const carregarDados = async () => {
     setLoading(true); setErro("");
@@ -64,6 +66,15 @@ function Productos() {
     else if (quantidade <= estoqueMinimo * 1.5)
       return { text: "Médio", class: "bg-yellow-100 text-yellow-700" };
     else return { text: "Bom", class: "bg-green-100 text-green-700" };
+  };
+
+  const formatarStock = (produto) => {
+    const embalagem = produto.apresentacoes?.[0];
+    if (!embalagem) return `${produto.quantidade} ${produto.unidade_base || "Unidade"}(s)`;
+    const fator = Number(embalagem.fator_conversao);
+    const inteiras = Math.floor(Number(produto.quantidade) / fator);
+    const soltas = Number(produto.quantidade) % fator;
+    return `${inteiras} ${embalagem.nome}(s)${soltas ? ` + ${soltas} ${produto.unidade_base || "Unidade"}(s)` : ""}`;
   };
 
   const produtosFiltrados = produtos.filter((p) => {
@@ -175,11 +186,11 @@ function Productos() {
                 </th>
                 {podeVerPrecoFornecedor && (
                   <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
-                    Preço Fornecedor
+                    Custo de compra
                   </th>
                 )}
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
-                  Preço
+                  Preço de venda
                 </th>
                 {podeVerAcoes && (
                   <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
@@ -211,7 +222,7 @@ function Productos() {
                       {fornecedor ? fornecedor.nome : "Sem fornecedor"}
                     </td>
 
-                    <td className="px-6 py-3">{produto.quantidade}</td>
+                    <td className="px-6 py-3"><span>{formatarStock(produto)}</span>{produto.apresentacoes?.[0] && <small className="block text-slate-500">{produto.quantidade} unidades base</small>}</td>
 
                     <td className="px-6 py-3">
                       <span
@@ -221,12 +232,14 @@ function Productos() {
                       </span>
                     </td>
                     {podeVerPrecoFornecedor && (
-                      <td className="px-6 py-3">
-                        {formatarMzn(produto.precoFornecedor)}
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        <strong className="font-semibold text-slate-800">{formatarMzn(produto.precoFornecedor)}</strong>
+                        <small className="block text-slate-500">por {produto.unidade_base || "unidade"}</small>
+                        {produto.apresentacoes?.[0] && <small className="mt-1 block font-medium text-amber-700">{formatarMzn(produto.apresentacoes[0].custo)} por {produto.apresentacoes[0].nome}</small>}
                       </td>
                     )}
 
-                    <td className="px-6 py-3">{formatarMzn(produto.preco)}</td>
+                    <td className="px-6 py-3 whitespace-nowrap"><strong className="font-semibold text-slate-900">{formatarMzn(produto.preco)}</strong><small className="block text-slate-500">por {produto.unidade_base || "unidade"}</small>{Boolean(produto.apresentacoes?.[0]?.vendavel) && <small className="mt-1 block font-semibold text-indigo-600">{formatarMzn(produto.apresentacoes[0].preco)} por {produto.apresentacoes[0].nome}</small>}</td>
 
                     <td className="px-6 py-3 text-center flex justify-center">
                       {podeGerir && (

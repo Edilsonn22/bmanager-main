@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Barcode,
   Check,
   ChevronRight,
   CircleX,
@@ -12,11 +11,13 @@ import {
   Plus,
   Search,
   ShoppingCart,
+  Smartphone,
   Trash2,
   UserRound,
 } from "lucide-react";
 import { API_URL } from "../api/authenticatedFetch";
 import { Feedback } from "./ui/Feedback";
+import QRCode from "qrcode";
 
 const formatar = (valor) =>
   `${Number(valor || 0).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })} MZN`;
@@ -29,7 +30,14 @@ export default function NovaVenda() {
   const [busca, setBusca] = useState("");
   const [itens, setItens] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("vendai.carrinho")) || [];
+      return (JSON.parse(localStorage.getItem("vendai.carrinho")) || []).map(
+        (item) => ({
+          ...item,
+          chave: item.chave || `${item.id}:base`,
+          apresentacao_id: item.apresentacao_id || null,
+          apresentacao_nome: item.apresentacao_nome || "Unidade",
+        }),
+      );
     } catch {
       return [];
     }
@@ -44,6 +52,10 @@ export default function NovaVenda() {
   const [enviando, setEnviando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [caixaAberto, setCaixaAberto] = useState(false);
+  const [pareamentoAberto, setPareamentoAberto] = useState(false);
+  const [pareamentoSessao, setPareamentoSessao] = useState(null);
+  const [pareamentoQr, setPareamentoQr] = useState("");
+  const [pareamentoErro, setPareamentoErro] = useState("");
   useEffect(() => {
     Promise.all([
       fetch(`${API_URL}/produtos`).then((r) => r.json()),
@@ -51,7 +63,8 @@ export default function NovaVenda() {
       fetch(`${API_URL}/caixa`).then((r) => r.json()),
     ])
       .then(([p, c, caixa]) => {
-        if (!p.sucesso || !c.sucesso || !caixa.sucesso) throw new Error(p.erro || c.erro || caixa.erro);
+        if (!p.sucesso || !c.sucesso || !caixa.sucesso)
+          throw new Error(p.erro || c.erro || caixa.erro);
         setProdutos(p.produtos || []);
         setClientes(c.clientes || []);
         setCaixaAberto(caixa.caixa?.estado === "aberto");
@@ -69,7 +82,10 @@ export default function NovaVenda() {
       .filter(
         (p) =>
           Number(p.quantidade) > 0 &&
-          (!q || p.nome.toLowerCase().includes(q) || p.codigo_barras === q),
+          (!q ||
+            p.nome.toLowerCase().includes(q) ||
+            p.codigo_barras === q ||
+            p.apresentacoes?.some((a) => a.codigo_barras === q)),
       )
       .slice(0, 12);
   }, [produtos, busca]);
@@ -80,44 +96,106 @@ export default function NovaVenda() {
   const total = Math.max(0, subtotal - Number(desconto || 0));
   const troco =
     forma === "dinheiro" ? Math.max(0, Number(recebido || 0) - total) : 0;
-  const adicionar = (p) =>
-    setItens((atuais) => {
-      const atual = atuais.find((i) => i.id === p.id);
-      if (atual) {
-        if (atual.quantidade >= Number(p.quantidade)) {
-          setErro(`Stock disponível para ${p.nome}: ${p.quantidade}.`);
-          return atuais;
+  const adicionar = useCallback(
+    (p, apresentacao = null) =>
+      setItens((atuais) => {
+        const chave = `${p.id}:${apresentacao?.id || "base"}`;
+        const fator = Number(apresentacao?.fator_conversao || 1);
+        const stock = Math.floor(Number(p.quantidade) / fator);
+        const atual = atuais.find((i) => i.chave === chave);
+        if (atual) {
+          if (atual.quantidade >= stock) {
+            setErro(
+              `Stock disponível para ${p.nome}: ${stock} ${apresentacao?.nome || p.unidade_base || "Unidade"}.`,
+            );
+            return atuais;
+          }
+          return atuais.map((i) =>
+            i.chave === chave ? { ...i, quantidade: i.quantidade + 1 } : i,
+          );
         }
-        return atuais.map((i) =>
-          i.id === p.id ? { ...i, quantidade: i.quantidade + 1 } : i,
-        );
-      }
-      return [
-        ...atuais,
-        {
-          id: p.id,
-          nome: p.nome,
-          preco: Number(p.preco),
-          quantidade: 1,
-          stock: Number(p.quantidade),
-        },
-      ];
-    });
+        return [
+          ...atuais,
+          {
+            id: p.id,
+            chave,
+            nome: p.nome,
+            apresentacao_id: apresentacao?.id || null,
+            apresentacao_nome:
+              apresentacao?.nome || p.unidade_base || "Unidade",
+            preco: Number(apresentacao?.preco || p.preco),
+            quantidade: 1,
+            stock,
+          },
+        ];
+      }),
+    [],
+  );
+  const adicionarPorCodigo = useCallback(
+    (codigo) => {
+      const valor = String(codigo || "").trim();
+      const produto = produtos.find(
+        (item) =>
+          item.codigo_barras === valor ||
+          item.apresentacoes?.some((a) => a.codigo_barras === valor),
+      );
+      if (!produto) return false;
+      adicionar(
+        produto,
+        produto.apresentacoes?.find((a) => a.codigo_barras === valor) || null,
+      );
+      return true;
+    },
+    [adicionar, produtos],
+  );
+
+  const abrirPareamento = async () => {
+    setPareamentoAberto(true); setPareamentoErro(""); setPareamentoQr("");
+    try {
+      const resposta = await fetch(`${API_URL}/scanner/sessoes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origem: import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin }) });
+      const dados = await resposta.json();
+      if (!resposta.ok) throw new Error(dados.erro || "Não foi possível ligar o telemóvel.");
+      setPareamentoSessao(dados.sessao);
+      setPareamentoQr(await QRCode.toDataURL(dados.sessao.url, { width: 320, margin: 2, errorCorrectionLevel: "M" }));
+    } catch (error) { setPareamentoErro(error.message); }
+  };
+
+  useEffect(() => {
+    if (!pareamentoAberto || !pareamentoSessao?.id) return undefined;
+    let ativo = true;
+    const consultar = async () => {
+      try {
+        const resposta = await fetch(`${API_URL}/scanner/sessoes/${pareamentoSessao.id}/codigos`);
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.erro || "Ligação interrompida.");
+        dados.codigos?.forEach(({ codigo }) => {
+          if (!adicionarPorCodigo(codigo)) setErro(`O código ${codigo} lido no telemóvel não está cadastrado.`);
+        });
+        if (dados.expirada) setPareamentoErro("A ligação expirou. Feche e gere um novo QR Code.");
+      } catch (error) { if (ativo) setPareamentoErro(error.message); }
+    };
+    consultar();
+    const intervalo = setInterval(consultar, 900);
+    return () => { ativo = false; clearInterval(intervalo); };
+  }, [adicionarPorCodigo, pareamentoAberto, pareamentoSessao]);
+
+  const fecharPareamento = () => {
+    if (pareamentoSessao?.id) fetch(`${API_URL}/scanner/sessoes/${pareamentoSessao.id}`, { method: "DELETE" }).catch(() => {});
+    setPareamentoAberto(false); setPareamentoSessao(null); setPareamentoQr("");
+  };
+
   const lerCodigo = (evento) => {
     if (evento.key !== "Enter") return;
     evento.preventDefault();
-    const produto = produtos.find(
-      (item) => item.codigo_barras && item.codigo_barras === busca.trim(),
-    );
-    if (!produto)
+    const codigo = busca.trim();
+    if (!adicionarPorCodigo(codigo))
       return setErro("Nenhum produto possui este código de barras.");
-    adicionar(produto);
     setBusca("");
   };
-  const quantidade = (id, delta) =>
+  const quantidade = (chave, delta) =>
     setItens((atuais) =>
       atuais.map((i) =>
-        i.id === id
+        i.chave === chave
           ? {
               ...i,
               quantidade: Math.min(i.stock, Math.max(1, i.quantidade + delta)),
@@ -139,6 +217,7 @@ export default function NovaVenda() {
         body: JSON.stringify({
           itens: itens.map((i) => ({
             produto_id: i.id,
+            apresentacao_id: i.apresentacao_id,
             quantidade: i.quantidade,
           })),
           cliente_id: cliente || null,
@@ -164,7 +243,9 @@ export default function NovaVenda() {
     <main className="commerce-page h-dvh w-full min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-7">
       <header className="commerce-header mb-5 flex min-w-0 flex-col gap-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-indigo-600">Ponto de venda</p>
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-indigo-600">
+            Ponto de venda
+          </p>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">Nova venda</h1>
           <p className="text-slate-600">
             Adicione produtos e conclua o pagamento.
@@ -177,32 +258,65 @@ export default function NovaVenda() {
           <History size={18} /> Histórico
         </Link>
       </header>
-      <div className="mb-5 grid w-full max-w-xl grid-cols-[1fr_auto_1fr] items-center text-xs font-semibold sm:mb-6 sm:text-sm" aria-label="Progresso da venda">
+      <div
+        className="mb-5 grid w-full max-w-xl grid-cols-[1fr_auto_1fr] items-center text-xs font-semibold sm:mb-6 sm:text-sm"
+        aria-label="Progresso da venda"
+      >
         <span
           className={`flex min-w-0 items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-center ${etapa === 1 ? "border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
         >
-          <span className={`grid size-5 shrink-0 place-items-center rounded-full text-[11px] ${etapa === 1 ? "bg-white/20" : "bg-emerald-100"}`}>{etapa === 2 ? <Check size={13} /> : "1"}</span>
+          <span
+            className={`grid size-5 shrink-0 place-items-center rounded-full text-[11px] ${etapa === 1 ? "bg-white/20" : "bg-emerald-100"}`}
+          >
+            {etapa === 2 ? <Check size={13} /> : "1"}
+          </span>
           Produtos
         </span>
-        <span className={`h-px w-5 sm:w-10 ${etapa === 2 ? "bg-emerald-300" : "bg-slate-300"}`} aria-hidden="true" />
+        <span
+          className={`h-px w-5 sm:w-10 ${etapa === 2 ? "bg-emerald-300" : "bg-slate-300"}`}
+          aria-hidden="true"
+        />
         <span
           className={`flex min-w-0 items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-center ${etapa === 2 ? "border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200" : "border-slate-200 bg-white text-gray-500"}`}
         >
-          <span className={`grid size-5 shrink-0 place-items-center rounded-full text-[11px] ${etapa === 2 ? "bg-white/20" : "bg-slate-100"}`}>2</span>
+          <span
+            className={`grid size-5 shrink-0 place-items-center rounded-full text-[11px] ${etapa === 2 ? "bg-white/20" : "bg-slate-100"}`}
+          >
+            2
+          </span>
           Pagamento
         </span>
       </div>
       <Feedback tipo="erro" className="mb-4" onClose={() => setErro("")}>
         {erro}
       </Feedback>
-      {!caixaAberto && !carregando && <div className="mb-4 flex min-w-0 flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between"><span>Abra o caixa antes de concluir uma venda.</span><Link to="/caixa" className="shrink-0 font-bold text-amber-800 underline underline-offset-2">Ir para o caixa</Link></div>}
+      {!caixaAberto && !carregando && (
+        <div className="mb-4 flex min-w-0 flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+          <span>Abra o caixa antes de concluir uma venda.</span>
+          <Link
+            to="/caixa"
+            className="shrink-0 font-bold text-amber-800 underline underline-offset-2"
+          >
+            Ir para o caixa
+          </Link>
+        </div>
+      )}
       {etapa === 1 ? (
         <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] xl:gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
           <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 bg-gradient-to-r from-white to-slate-50/70 p-4 sm:p-5">
               <div className="mb-4 flex min-w-0 items-center justify-between gap-3">
-                <div className="min-w-0"><h2 className="font-bold text-slate-900">Catálogo de produtos</h2><p className="text-xs text-slate-500">Selecione os itens que deseja vender</p></div>
-                <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{visiveis.length} disponíveis</span>
+                <div className="min-w-0">
+                  <h2 className="font-bold text-slate-900">
+                    Catálogo de produtos
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Selecione os itens que deseja vender
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">
+                  {visiveis.length} disponíveis
+                </span>
               </div>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -214,13 +328,31 @@ export default function NovaVenda() {
                   onChange={(e) => setBusca(e.target.value)}
                   onKeyDown={lerCodigo}
                   placeholder="Pesquisar nome ou código de barras..."
-                  className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-20 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-32 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 sm:pr-40"
                 />
-                {busca && <button type="button" onClick={() => { setBusca(""); buscaRef.current?.focus(); }} aria-label="Limpar pesquisa" className="absolute right-11 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><CircleX size={18} /></button>}
-                <Barcode
-                  className="pointer-events-none absolute right-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
-                  aria-hidden="true"
-                />
+                {busca && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBusca("");
+                      buscaRef.current?.focus();
+                    }}
+                    aria-label="Limpar pesquisa"
+                    className="absolute right-28 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 sm:right-36"
+                  >
+                    <CircleX size={18} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={abrirPareamento}
+                  aria-label="Ligar telemóvel como leitor"
+                  title="Ligar telemóvel como leitor"
+                  className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-2 text-xs font-bold text-white hover:bg-indigo-700"
+                >
+                  <Smartphone size={17} />
+                  <span className="hidden sm:inline">Telemóvel</span>
+                </button>
               </div>
               <div className="mt-3 flex flex-col gap-1 text-xs text-gray-500 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
                 <span className="min-w-0">
@@ -306,6 +438,21 @@ export default function NovaVenda() {
                         <Plus size={16} />
                         <span className="hidden xl:inline">Adicionar</span>
                       </button>
+                      {p.apresentacoes
+                        ?.filter((a) => Boolean(a.vendavel))
+                        .map((a) => (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => adicionar(p, a)}
+                            disabled={
+                              Number(p.quantidade) < Number(a.fator_conversao)
+                            }
+                            className="col-span-full justify-self-end rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                          >
+                            + {a.nome} · {formatar(a.preco)}
+                          </button>
+                        ))}
                     </article>
                   );
                 })}
@@ -319,123 +466,207 @@ export default function NovaVenda() {
             desconto={desconto}
             setDesconto={setDesconto}
             quantidade={quantidade}
-            remover={(id) => setItens((v) => v.filter((i) => i.id !== id))}
+            remover={(chave) =>
+              setItens((v) => v.filter((i) => i.chave !== chave))
+            }
             limpar={() => setItens([])}
             avancar={() =>
               itens.length && caixaAberto
                 ? setEtapa(2)
-                : setErro(itens.length ? "Abra o caixa antes de continuar." : "Adicione pelo menos um produto.")
+                : setErro(
+                    itens.length
+                      ? "Abra o caixa antes de continuar."
+                      : "Adicione pelo menos um produto.",
+                  )
             }
           />
         </div>
       ) : (
         <section className="commerce-panel mx-auto w-full max-w-3xl overflow-hidden">
-          <div className="border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/50 p-5 sm:p-6"><div className="flex items-center gap-3"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-indigo-100 text-indigo-700"><CreditCard size={21} /></span><div><h2 className="text-xl font-bold text-slate-900">Finalizar pagamento</h2><p className="text-sm text-slate-500">Confirme o cliente e a forma de pagamento.</p></div></div></div>
-          <div className="p-5 sm:p-6">
-          <label className="block text-sm font-semibold text-slate-700">
-            <span className="mb-1.5 flex items-center gap-2"><UserRound size={16} className="text-slate-400" />
-            Cliente (opcional)
-            </span>
-            <select
-              value={cliente}
-              onChange={(e) => {
-                setCliente(e.target.value);
-                if (e.target.value) setClienteAvulso("");
-              }}
-              className="w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-            >
-              <option value="">Consumidor final</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </label>
-          {!cliente && (
-            <label className="mt-4 block text-sm font-semibold text-slate-700">
-              Nome do cliente desta venda
-              <input
-                type="text"
-                maxLength="255"
-                value={clienteAvulso}
-                onChange={(e) => setClienteAvulso(e.target.value)}
-                placeholder="Ex.: Ana Manuel (opcional)"
-                className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              />
-              <span className="mt-1.5 block text-xs font-normal text-slate-500">
-                O nome ficará apenas nesta venda e não criará um cadastro.
+          <div className="border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/50 p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-indigo-100 text-indigo-700">
+                <CreditCard size={21} />
               </span>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Finalizar pagamento
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Confirme o cliente e a forma de pagamento.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-5 sm:p-6">
+            <label className="block text-sm font-semibold text-slate-700">
+              <span className="mb-1.5 flex items-center gap-2">
+                <UserRound size={16} className="text-slate-400" />
+                Cliente (opcional)
+              </span>
+              <select
+                value={cliente}
+                onChange={(e) => {
+                  setCliente(e.target.value);
+                  if (e.target.value) setClienteAvulso("");
+                }}
+                className="w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="">Consumidor final</option>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>
             </label>
-          )}
-          <label className="mt-5 block text-sm font-semibold text-slate-700">
-            <span className="mb-1.5 flex items-center gap-2"><CreditCard size={16} className="text-slate-400" />Forma de pagamento</span>
-            <select
-              value={forma}
-              onChange={(e) => setForma(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-            >
-              {[
-                ["dinheiro", "Dinheiro"],
-                ["mpesa", "M-Pesa"],
-                ["emola", "e-Mola"],
-                ["cartao", "Cartão"],
-                ["transferencia", "Transferência"],
-                ["credito", "Crédito"],
-              ].map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </label>
-          {forma === "dinheiro" && (
-            <label className="mt-5 block text-sm font-semibold text-slate-700">
-              Valor recebido
-              <input
-                type="number"
-                min={total}
-                step="0.01"
-                value={recebido}
-                onChange={(e) => setRecebido(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                required
-              />
-            </label>
-          )}
-          <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 sm:p-5">
-            <p className="flex min-w-0 justify-between gap-4 text-slate-600">
-              <span>Total</span>
-              <strong className="break-words text-right text-xl text-slate-900">{formatar(total)}</strong>
-            </p>
-            {forma === "dinheiro" && (
-              <p className="mt-3 flex min-w-0 justify-between gap-4 border-t border-indigo-100 pt-3 text-emerald-700">
-                <span>Troco</span>
-                <strong className="break-words text-right">{formatar(troco)}</strong>
-              </p>
+            {!cliente && (
+              <label className="mt-4 block text-sm font-semibold text-slate-700">
+                Nome do cliente desta venda
+                <input
+                  type="text"
+                  maxLength="255"
+                  value={clienteAvulso}
+                  onChange={(e) => setClienteAvulso(e.target.value)}
+                  placeholder="Ex.: Ana Manuel (opcional)"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                />
+                <span className="mt-1.5 block text-xs font-normal text-slate-500">
+                  O nome ficará apenas nesta venda e não criará um cadastro.
+                </span>
+              </label>
             )}
-          </div>
-          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setEtapa(1)}
-              className="w-full rounded-xl border border-slate-300 bg-white p-3 font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto sm:min-w-32"
-            >
-              Voltar
-            </button>
-            <button
-              type="button"
-              disabled={
-                enviando || (forma === "dinheiro" && Number(recebido) < total)
-              }
-              onClick={concluir}
-              className="w-full rounded-xl bg-indigo-600 p-3 font-bold text-white shadow-md shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg disabled:translate-y-0 disabled:opacity-50 sm:min-w-52"
-            >
-              {enviando ? "A concluir..." : "Concluir venda"}
-            </button>
-          </div>
+            <label className="mt-5 block text-sm font-semibold text-slate-700">
+              <span className="mb-1.5 flex items-center gap-2">
+                <CreditCard size={16} className="text-slate-400" />
+                Forma de pagamento
+              </span>
+              <select
+                value={forma}
+                onChange={(e) => setForma(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white p-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              >
+                {[
+                  ["dinheiro", "Dinheiro"],
+                  ["mpesa", "M-Pesa"],
+                  ["emola", "e-Mola"],
+                  ["cartao", "Cartão"],
+                  ["transferencia", "Transferência"],
+                  ["credito", "Crédito"],
+                ].map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {forma === "dinheiro" && (
+              <label className="mt-5 block text-sm font-semibold text-slate-700">
+                Valor recebido
+                <input
+                  type="number"
+                  min={total}
+                  step="0.01"
+                  value={recebido}
+                  onChange={(e) => setRecebido(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  required
+                />
+              </label>
+            )}
+            <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 sm:p-5">
+              <p className="flex min-w-0 justify-between gap-4 text-slate-600">
+                <span>Total</span>
+                <strong className="break-words text-right text-xl text-slate-900">
+                  {formatar(total)}
+                </strong>
+              </p>
+              {forma === "dinheiro" && (
+                <p className="mt-3 flex min-w-0 justify-between gap-4 border-t border-indigo-100 pt-3 text-emerald-700">
+                  <span>Troco</span>
+                  <strong className="break-words text-right">
+                    {formatar(troco)}
+                  </strong>
+                </p>
+              )}
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setEtapa(1)}
+                className="w-full rounded-xl border border-slate-300 bg-white p-3 font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto sm:min-w-32"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                disabled={
+                  enviando || (forma === "dinheiro" && Number(recebido) < total)
+                }
+                onClick={concluir}
+                className="w-full rounded-xl bg-indigo-600 p-3 font-bold text-white shadow-md shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg disabled:translate-y-0 disabled:opacity-50 sm:min-w-52"
+              >
+                {enviando ? "A concluir..." : "Concluir venda"}
+              </button>
+            </div>
           </div>
         </section>
+      )}
+      {pareamentoAberto && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm sm:p-6">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Ligar telemóvel como leitor"
+            className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
+          >
+            <header className="flex items-center justify-between border-b border-slate-100 p-5">
+              <div>
+                <h2 className="font-bold text-slate-900">Ligar telemóvel</h2>
+                <p className="text-xs text-slate-500">
+                  Use o telemóvel como leitor desta venda.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={fecharPareamento}
+                aria-label="Fechar ligação"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+              >
+                <CircleX size={22} />
+              </button>
+            </header>
+            <div className="p-5 text-center">
+              {pareamentoQr && !pareamentoErro && (
+                <img
+                  src={pareamentoQr}
+                  alt="QR Code para ligar o telemóvel"
+                  className="mx-auto w-full max-w-64 rounded-2xl border border-slate-100"
+                />
+              )}
+              {!pareamentoQr && !pareamentoErro && (
+                <div className="grid min-h-64 place-items-center rounded-2xl bg-slate-50 text-sm text-slate-500">
+                  A preparar ligação segura...
+                </div>
+              )}
+              <p className={`mt-4 rounded-xl p-3 text-sm ${pareamentoErro ? "bg-red-50 text-red-700" : "bg-indigo-50 text-indigo-800"}`}>
+                {pareamentoErro || "Leia este QR Code com a câmara normal do telemóvel. Depois, cada produto lido será adicionado automaticamente aqui."}
+              </p>
+              {!pareamentoErro && pareamentoQr && (
+                <p className="mt-3 text-xs text-slate-500">
+                  A ligação é exclusiva desta venda e expira em 10 minutos.
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={fecharPareamento}
+                className="mt-4 w-full rounded-xl border border-slate-200 py-2.5 font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Fechar ligação
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </main>
   );
@@ -455,7 +686,9 @@ function Carrinho({
   return (
     <aside className="commerce-panel min-w-0 self-start overflow-hidden lg:sticky lg:top-6">
       <div className="flex min-w-0 items-center border-b border-gray-100 bg-gradient-to-r from-white to-indigo-50/50 p-4 sm:p-5">
-        <span className="mr-3 grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-100 text-indigo-700"><ShoppingCart size={19} /></span>
+        <span className="mr-3 grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-100 text-indigo-700">
+          <ShoppingCart size={19} />
+        </span>
         <h2 className="min-w-0 font-bold text-gray-900">
           Resumo da venda
           <span className="ml-2 inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-700">
@@ -486,15 +719,20 @@ function Carrinho({
         )}
         {itens.map((i) => (
           <div
-            key={i.id}
+            key={i.chave || `${i.id}:base`}
             className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-indigo-200"
           >
             <div className="flex justify-between gap-2">
-              <strong className="min-w-0 flex-1 break-words">{i.nome}</strong>
+              <strong className="min-w-0 flex-1 break-words">
+                {i.nome}
+                <small className="block font-normal text-indigo-600">
+                  {i.apresentacao_nome || "Unidade"}
+                </small>
+              </strong>
               <button
                 type="button"
                 aria-label={`Remover ${i.nome}`}
-                onClick={() => remover(i.id)}
+                onClick={() => remover(i.chave)}
               >
                 <Trash2 size={17} className="text-red-600" />
               </button>
@@ -504,7 +742,7 @@ function Carrinho({
                 <button
                   type="button"
                   aria-label="Diminuir quantidade"
-                  onClick={() => quantidade(i.id, -1)}
+                  onClick={() => quantidade(i.chave, -1)}
                   className="grid size-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-700"
                 >
                   <Minus size={15} />
@@ -515,7 +753,7 @@ function Carrinho({
                 <button
                   type="button"
                   aria-label="Aumentar quantidade"
-                  onClick={() => quantidade(i.id, 1)}
+                  onClick={() => quantidade(i.chave, 1)}
                   className="grid size-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-700"
                 >
                   <Plus size={15} />
@@ -528,40 +766,41 @@ function Carrinho({
           </div>
         ))}
       </div>
-      <div className="border-t border-slate-100 p-4 sm:p-5"><label className="block text-sm font-semibold text-slate-700">
-        Desconto (MZN)
-        <input
-          type="number"
-          min="0"
-          max={subtotal}
-          step="0.01"
-          value={desconto}
-          onChange={(e) => setDesconto(e.target.value)}
-          className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-        />
-      </label>
-      <div className="mt-4 rounded-xl bg-slate-50 p-4">
-        <p className="flex min-w-0 justify-between gap-3 text-sm">
-          <span>Subtotal</span>
-          <span className="min-w-0 break-words text-right">
-            {formatar(subtotal)}
-          </span>
-        </p>
-        <p className="mt-3 flex min-w-0 justify-between gap-3 border-t border-slate-200 pt-3 text-lg">
-          <strong>Total</strong>
-          <strong className="min-w-0 break-words text-right">
-            {formatar(total)}
-          </strong>
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={avancar}
-        disabled={!itens.length}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 p-3 font-bold text-white shadow-md shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 disabled:translate-y-0 disabled:opacity-50"
-      >
-        Continuar para pagamento <ChevronRight size={18} />
-      </button>
+      <div className="border-t border-slate-100 p-4 sm:p-5">
+        <label className="block text-sm font-semibold text-slate-700">
+          Desconto (MZN)
+          <input
+            type="number"
+            min="0"
+            max={subtotal}
+            step="0.01"
+            value={desconto}
+            onChange={(e) => setDesconto(e.target.value)}
+            className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          />
+        </label>
+        <div className="mt-4 rounded-xl bg-slate-50 p-4">
+          <p className="flex min-w-0 justify-between gap-3 text-sm">
+            <span>Subtotal</span>
+            <span className="min-w-0 break-words text-right">
+              {formatar(subtotal)}
+            </span>
+          </p>
+          <p className="mt-3 flex min-w-0 justify-between gap-3 border-t border-slate-200 pt-3 text-lg">
+            <strong>Total</strong>
+            <strong className="min-w-0 break-words text-right">
+              {formatar(total)}
+            </strong>
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={avancar}
+          disabled={!itens.length}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 p-3 font-bold text-white shadow-md shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 disabled:translate-y-0 disabled:opacity-50"
+        >
+          Continuar para pagamento <ChevronRight size={18} />
+        </button>
       </div>
     </aside>
   );
