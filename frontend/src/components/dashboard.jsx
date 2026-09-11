@@ -146,22 +146,28 @@ function Dashboard() {
           throw new Error("Sessão expirada. Faça login novamente.");
         }
 
+        const produtosData = await produtosResponse
+          .json()
+          .catch(() => ({}));
+
         // -----------------------------------------------
         // ERRO API
         // -----------------------------------------------
 
         if (!produtosResponse.ok) {
-          throw new Error("Erro ao carregar produtos.");
+          throw new Error(
+            produtosData.erro ||
+              produtosData.message ||
+              `Erro ao carregar produtos (${produtosResponse.status}).`,
+          );
         }
 
-        // -----------------------------------------------
-        // RESPOSTA
-        // -----------------------------------------------
-
-        const produtosData = await produtosResponse.json();
-
         if (!produtosData.sucesso) {
-          throw new Error(produtosData.message || "Erro ao carregar produtos.");
+          throw new Error(
+            produtosData.erro ||
+              produtosData.message ||
+              "Erro ao carregar produtos.",
+          );
         }
 
         const produtos = produtosData.produtos || [];

@@ -1,7 +1,10 @@
--- Vendai: esquema completo para uma instalação nova.
+-- Vendai: esquema consolidado completo até à migração 016_scanner_telemovel.sql.
+-- Versão do esquema: 2026-09-11.
 -- Importe este arquivo dentro da base vazia selecionada.
 -- O script não apaga nem recria a base fornecida pelo serviço de hospedagem.
 -- Para uma base existente, use as migrações em API/sql/.
+
+SET NAMES utf8mb4;
 
 CREATE TABLE Empresa (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
