@@ -1,5 +1,5 @@
-const CACHE_NAME = "vendai-shell-v2";
-const APP_SHELL = ["/", "/manifest.webmanifest"];
+const CACHE_NAME = "vendai-scanner-v3";
+const APP_SHELL = ["/", "/scanner", "/manifest.webmanifest", "/vendai-scanner.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -12,8 +12,8 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((nomes) => Promise.all(
-        nomes.filter((nome) => nome !== CACHE_NAME).map((nome) => caches.delete(nome)),
+      .then((names) => Promise.all(
+        names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)),
       ))
       .then(() => self.clients.claim()),
   );
@@ -23,27 +23,26 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  if (request.method !== "GET" || url.origin !== self.location.origin) return;
+  if (request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request).catch(async () => {
-        const paginaInicial = await caches.match("/");
-        return paginaInicial || new Response("Aplicação indisponível sem ligação.", {
-          status: 503,
-          headers: { "Content-Type": "text/plain; charset=utf-8" },
-        });
+        const scanner = await caches.match("/scanner");
+        return scanner || caches.match("/");
       }),
     );
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((emCache) => emCache || fetch(request).then((response) => {
-      if (!response.ok) return response;
-      const copia = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(request, copia));
-      return response;
-    }).catch(() => new Response("Recurso indisponível.", { status: 503 }))),
-  );
+  if (url.pathname.startsWith("/assets/") || ["/manifest.webmanifest", "/vendai-scanner.svg"].includes(url.pathname)) {
+    event.respondWith(
+      caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+        if (!response.ok) return response;
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        return response;
+      })),
+    );
+  }
 });

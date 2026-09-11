@@ -6,12 +6,12 @@ const hash = (token) => createHash("sha256").update(token).digest("hex");
 export async function criarSessao(req, res) {
   const token = randomBytes(32).toString("hex");
   await pool.execute("UPDATE ScannerSessao SET ativa=FALSE WHERE empresa_id=? AND usuario_id=? AND ativa=TRUE", [req.user.empresa_id, req.user.id]);
-  const [result] = await pool.execute("INSERT INTO ScannerSessao (empresa_id,usuario_id,token_hash,expira_em) VALUES (?,?,?,DATE_ADD(NOW(), INTERVAL 10 MINUTE))", [req.user.empresa_id, req.user.id, hash(token)]);
+  const [result] = await pool.execute("INSERT INTO ScannerSessao (empresa_id,usuario_id,token_hash,expira_em) VALUES (?,?,?,DATE_ADD(NOW(), INTERVAL 30 DAY))", [req.user.empresa_id, req.user.id, hash(token)]);
   const origemRecebida = String(req.body?.origem || "").replace(/\/$/, "");
   const origem = /^https?:\/\/[^\s]+$/i.test(origemRecebida)
     ? origemRecebida
     : String(process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
-  return res.status(201).json({ sucesso: true, sessao: { id: result.insertId, url: `${origem}/scanner/${token}`, expira_em_minutos: 10 } });
+  return res.status(201).json({ sucesso: true, sessao: { id: result.insertId, url: `${origem}/scanner/${token}`, expira_em: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() } });
 }
 
 export async function receberCodigo(req, res) {

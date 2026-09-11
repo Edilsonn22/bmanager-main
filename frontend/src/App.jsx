@@ -53,6 +53,7 @@ export default function App() {
     <Route path="/login" element={<Login />} />
     <Route path="/registo" element={<Register />} />
     <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+    <Route path="/scanner" element={<ScannerMobile />} />
     <Route path="/scanner/:token" element={<ScannerMobile />} />
     <Route path="/redefinir-senha" element={<RecuperarSenha />} />
     <Route element={<ProtectedRoute />}><Route element={<Layout />}>

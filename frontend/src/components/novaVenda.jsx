@@ -21,6 +21,19 @@ import QRCode from "qrcode";
 
 const formatar = (valor) =>
   `${Number(valor || 0).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })} MZN`;
+const SCANNER_STORAGE_KEY = "vendai.scannerSessao";
+
+const carregarScannerGuardado = () => {
+  try {
+    const sessao = JSON.parse(localStorage.getItem(SCANNER_STORAGE_KEY));
+    if (sessao?.id && sessao?.url && new Date(sessao.expira_em) > new Date())
+      return sessao;
+    localStorage.removeItem(SCANNER_STORAGE_KEY);
+  } catch {
+    localStorage.removeItem(SCANNER_STORAGE_KEY);
+  }
+  return null;
+};
 
 export default function NovaVenda() {
   const navigate = useNavigate();
@@ -53,7 +66,7 @@ export default function NovaVenda() {
   const [carregando, setCarregando] = useState(true);
   const [caixaAberto, setCaixaAberto] = useState(false);
   const [pareamentoAberto, setPareamentoAberto] = useState(false);
-  const [pareamentoSessao, setPareamentoSessao] = useState(null);
+  const [pareamentoSessao, setPareamentoSessao] = useState(carregarScannerGuardado);
   const [pareamentoQr, setPareamentoQr] = useState("");
   const [pareamentoErro, setPareamentoErro] = useState("");
   useEffect(() => {
@@ -152,36 +165,61 @@ export default function NovaVenda() {
   const abrirPareamento = async () => {
     setPareamentoAberto(true); setPareamentoErro(""); setPareamentoQr("");
     try {
+      if (pareamentoSessao?.url) {
+        setPareamentoQr(await QRCode.toDataURL(pareamentoSessao.url, { width: 320, margin: 2, errorCorrectionLevel: "M" }));
+        return;
+      }
       const resposta = await fetch(`${API_URL}/scanner/sessoes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origem: import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin }) });
       const dados = await resposta.json();
       if (!resposta.ok) throw new Error(dados.erro || "Não foi possível ligar o telemóvel.");
       setPareamentoSessao(dados.sessao);
+      localStorage.setItem(SCANNER_STORAGE_KEY, JSON.stringify(dados.sessao));
       setPareamentoQr(await QRCode.toDataURL(dados.sessao.url, { width: 320, margin: 2, errorCorrectionLevel: "M" }));
     } catch (error) { setPareamentoErro(error.message); }
   };
 
   useEffect(() => {
-    if (!pareamentoAberto || !pareamentoSessao?.id) return undefined;
+    if (!pareamentoSessao?.id) return undefined;
     let ativo = true;
     const consultar = async () => {
       try {
         const resposta = await fetch(`${API_URL}/scanner/sessoes/${pareamentoSessao.id}/codigos`);
         const dados = await resposta.json();
-        if (!resposta.ok) throw new Error(dados.erro || "Ligação interrompida.");
+        if (!resposta.ok) {
+          if ([404, 410].includes(resposta.status)) {
+            localStorage.removeItem(SCANNER_STORAGE_KEY);
+            setPareamentoSessao(null);
+            setPareamentoQr("");
+          }
+          throw new Error(dados.erro || "Ligação interrompida.");
+        }
         dados.codigos?.forEach(({ codigo }) => {
-          if (!adicionarPorCodigo(codigo)) setErro(`O código ${codigo} lido no telemóvel não está cadastrado.`);
+          setBusca(codigo);
+          if (adicionarPorCodigo(codigo)) setErro("");
+          else
+            setErro(`O código ${codigo} lido no telemóvel não está cadastrado.`);
         });
-        if (dados.expirada) setPareamentoErro("A ligação expirou. Feche e gere um novo QR Code.");
+        if (dados.expirada) {
+          localStorage.removeItem(SCANNER_STORAGE_KEY);
+          setPareamentoSessao(null);
+          setPareamentoQr("");
+          setPareamentoErro("A ligação expirou. Gere um novo QR Code.");
+        }
       } catch (error) { if (ativo) setPareamentoErro(error.message); }
     };
     consultar();
-    const intervalo = setInterval(consultar, 900);
+    const intervalo = setInterval(consultar, 450);
     return () => { ativo = false; clearInterval(intervalo); };
-  }, [adicionarPorCodigo, pareamentoAberto, pareamentoSessao]);
+  }, [adicionarPorCodigo, pareamentoSessao]);
 
   const fecharPareamento = () => {
+    setPareamentoAberto(false);
+  };
+
+  const desligarScanner = () => {
     if (pareamentoSessao?.id) fetch(`${API_URL}/scanner/sessoes/${pareamentoSessao.id}`, { method: "DELETE" }).catch(() => {});
-    setPareamentoAberto(false); setPareamentoSessao(null); setPareamentoQr("");
+    localStorage.removeItem(SCANNER_STORAGE_KEY);
+    setPareamentoAberto(false); setPareamentoSessao(null); setPareamentoQr(""); setPareamentoErro("");
   };
 
   const lerCodigo = (evento) => {
@@ -346,17 +384,21 @@ export default function NovaVenda() {
                 <button
                   type="button"
                   onClick={abrirPareamento}
-                  aria-label="Ligar telemóvel como leitor"
-                  title="Ligar telemóvel como leitor"
-                  className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-2 text-xs font-bold text-white hover:bg-indigo-700"
+                  aria-label={pareamentoSessao ? "Scanner do telemóvel ligado" : "Ligar telemóvel como leitor"}
+                  title={pareamentoSessao ? "Scanner ligado — ver ligação" : "Ligar telemóvel como leitor"}
+                  className={`absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-bold text-white ${pareamentoSessao ? "bg-emerald-600 hover:bg-emerald-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
                 >
                   <Smartphone size={17} />
-                  <span className="hidden sm:inline">Telemóvel</span>
+                  <span className="hidden sm:inline">
+                    {pareamentoSessao ? "Ligado" : "Telemóvel"}
+                  </span>
                 </button>
               </div>
               <div className="mt-3 flex flex-col gap-1 text-xs text-gray-500 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
                 <span className="min-w-0">
-                  Digite para pesquisar ou leia o código e pressione Enter
+                  {pareamentoSessao
+                    ? "Scanner ligado: a aguardar leituras do telemóvel"
+                    : "Digite para pesquisar ou leia o código e pressione Enter"}
                 </span>
                 <span className="shrink-0">Máximo de 12 resultados</span>
               </div>
@@ -622,7 +664,9 @@ export default function NovaVenda() {
           >
             <header className="flex items-center justify-between border-b border-slate-100 p-5">
               <div>
-                <h2 className="font-bold text-slate-900">Ligar telemóvel</h2>
+                <h2 className="font-bold text-slate-900">
+                  {pareamentoSessao ? "Scanner ligado" : "Ligar telemóvel"}
+                </h2>
                 <p className="text-xs text-slate-500">
                   Use o telemóvel como leitor desta venda.
                 </p>
@@ -654,16 +698,25 @@ export default function NovaVenda() {
               </p>
               {!pareamentoErro && pareamentoQr && (
                 <p className="mt-3 text-xs text-slate-500">
-                  A ligação é exclusiva desta venda e expira em 10 minutos.
+                  Emparelhe uma vez, instale o Vendai Scanner e faça várias leituras seguidas. A autorização permanece ativa durante 30 dias.
                 </p>
               )}
-              <button
-                type="button"
-                onClick={fecharPareamento}
-                className="mt-4 w-full rounded-xl border border-slate-200 py-2.5 font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Fechar ligação
-              </button>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={desligarScanner}
+                  className="w-full rounded-xl border border-red-200 py-2.5 font-semibold text-red-700 hover:bg-red-50"
+                >
+                  Desligar aparelho
+                </button>
+                <button
+                  type="button"
+                  onClick={fecharPareamento}
+                  className="w-full rounded-xl bg-indigo-600 py-2.5 font-semibold text-white hover:bg-indigo-700"
+                >
+                  Continuar ligado
+                </button>
+              </div>
             </div>
           </section>
         </div>
