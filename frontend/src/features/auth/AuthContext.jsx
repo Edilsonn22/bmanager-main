@@ -10,6 +10,7 @@ const limparArmazenamento = () => {
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem("token");
   localStorage.removeItem("usuario");
+  localStorage.removeItem("vendai.scannerSessao");
 };
 
 const tokenExpirou = (token) => {

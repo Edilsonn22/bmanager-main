@@ -18,23 +18,10 @@ import {
 import { API_URL } from "../api/authenticatedFetch";
 import { Feedback } from "./ui/Feedback";
 import QRCode from "qrcode";
+import { carregarScannerGuardado, guardarScanner, removerScanner } from "../utils/scannerSession";
 
 const formatar = (valor) =>
   `${Number(valor || 0).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })} MZN`;
-const SCANNER_STORAGE_KEY = "vendai.scannerSessao";
-
-const carregarScannerGuardado = () => {
-  try {
-    const sessao = JSON.parse(localStorage.getItem(SCANNER_STORAGE_KEY));
-    if (sessao?.id && sessao?.url && new Date(sessao.expira_em) > new Date())
-      return sessao;
-    localStorage.removeItem(SCANNER_STORAGE_KEY);
-  } catch {
-    localStorage.removeItem(SCANNER_STORAGE_KEY);
-  }
-  return null;
-};
-
 export default function NovaVenda() {
   const navigate = useNavigate();
   const buscaRef = useRef(null);
@@ -173,7 +160,7 @@ export default function NovaVenda() {
       const dados = await resposta.json();
       if (!resposta.ok) throw new Error(dados.erro || "Não foi possível ligar o telemóvel.");
       setPareamentoSessao(dados.sessao);
-      localStorage.setItem(SCANNER_STORAGE_KEY, JSON.stringify(dados.sessao));
+      guardarScanner(dados.sessao);
       setPareamentoQr(await QRCode.toDataURL(dados.sessao.url, { width: 320, margin: 2, errorCorrectionLevel: "M" }));
     } catch (error) { setPareamentoErro(error.message); }
   };
@@ -187,7 +174,7 @@ export default function NovaVenda() {
         const dados = await resposta.json();
         if (!resposta.ok) {
           if ([404, 410].includes(resposta.status)) {
-            localStorage.removeItem(SCANNER_STORAGE_KEY);
+            removerScanner();
             setPareamentoSessao(null);
             setPareamentoQr("");
           }
@@ -200,7 +187,7 @@ export default function NovaVenda() {
             setErro(`O código ${codigo} lido no telemóvel não está cadastrado.`);
         });
         if (dados.expirada) {
-          localStorage.removeItem(SCANNER_STORAGE_KEY);
+          removerScanner();
           setPareamentoSessao(null);
           setPareamentoQr("");
           setPareamentoErro("A ligação expirou. Gere um novo QR Code.");
@@ -218,7 +205,7 @@ export default function NovaVenda() {
 
   const desligarScanner = () => {
     if (pareamentoSessao?.id) fetch(`${API_URL}/scanner/sessoes/${pareamentoSessao.id}`, { method: "DELETE" }).catch(() => {});
-    localStorage.removeItem(SCANNER_STORAGE_KEY);
+    removerScanner();
     setPareamentoAberto(false); setPareamentoSessao(null); setPareamentoQr(""); setPareamentoErro("");
   };
 

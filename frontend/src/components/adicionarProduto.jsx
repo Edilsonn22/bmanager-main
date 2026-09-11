@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import { API_URL } from "../api/authenticatedFetch";
 import { Feedback } from "./ui/Feedback";
+import { carregarScannerGuardado, guardarScanner, removerScanner } from "../utils/scannerSession";
 
 const inicial = {
   nome: "",
@@ -34,7 +35,7 @@ export default function AdicionarProduto() {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [scannerCampo, setScannerCampo] = useState("");
-  const [scannerSessao, setScannerSessao] = useState(null);
+  const [scannerSessao, setScannerSessao] = useState(carregarScannerGuardado);
   const [scannerQr, setScannerQr] = useState("");
   const [scannerErro, setScannerErro] = useState("");
   const mudar = (campo) => (evento) =>
@@ -77,9 +78,13 @@ export default function AdicionarProduto() {
 
   const abrirScanner = async (campo) => {
     setScannerCampo(campo);
-    setScannerSessao(null);
     setScannerQr("");
     setScannerErro("");
+    const sessaoGuardada = carregarScannerGuardado();
+    if (sessaoGuardada) {
+      setScannerSessao(sessaoGuardada);
+      return;
+    }
     try {
       const resposta = await fetch(`${API_URL}/scanner/sessoes`, {
         method: "POST",
@@ -92,6 +97,7 @@ export default function AdicionarProduto() {
       if (!resposta.ok)
         throw new Error(dados.erro || "Não foi possível ligar o telemóvel.");
       setScannerSessao(dados.sessao);
+      guardarScanner(dados.sessao);
       setScannerQr(
         await QRCode.toDataURL(dados.sessao.url, {
           width: 320,
@@ -105,13 +111,9 @@ export default function AdicionarProduto() {
   };
 
   const fecharScanner = () => {
-    if (scannerSessao?.id)
-      fetch(`${API_URL}/scanner/sessoes/${scannerSessao.id}`, {
-        method: "DELETE",
-      }).catch(() => {});
     setScannerCampo("");
-    setScannerSessao(null);
     setScannerQr("");
+    setScannerErro("");
   };
 
   useEffect(() => {
@@ -123,17 +125,18 @@ export default function AdicionarProduto() {
           `${API_URL}/scanner/sessoes/${scannerSessao.id}/codigos`,
         );
         const dados = await resposta.json();
-        if (!resposta.ok)
+        if (!resposta.ok) {
+          if ([404, 410].includes(resposta.status)) {
+            removerScanner();
+            setScannerSessao(null);
+          }
           throw new Error(dados.erro || "A ligação foi interrompida.");
+        }
         const codigo = dados.codigos?.[0]?.codigo;
         if (codigo && ativo) {
           setForm((atual) => ({ ...atual, [scannerCampo]: codigo }));
           setSucesso(`Código ${codigo} preenchido pelo telemóvel.`);
-          fetch(`${API_URL}/scanner/sessoes/${scannerSessao.id}`, {
-            method: "DELETE",
-          }).catch(() => {});
           setScannerCampo("");
-          setScannerSessao(null);
           setScannerQr("");
         }
       } catch (error) {
@@ -649,14 +652,19 @@ export default function AdicionarProduto() {
                   className="mx-auto w-full max-w-64 rounded-2xl border border-slate-100"
                 />
               )}
-              {!scannerQr && !scannerErro && (
+              {!scannerQr && scannerSessao && !scannerErro && (
                 <div className="grid min-h-64 place-items-center rounded-2xl bg-slate-50 text-sm text-slate-500">
-                  A preparar ligação segura...
+                  <div className="px-6 text-center">
+                    <Smartphone className="mx-auto mb-3 text-emerald-600" size={42} />
+                    <b className="block text-slate-800">Telemóvel já ligado</b>
+                    <span>Aponte a câmara para o código de barras.</span>
+                  </div>
                 </div>
               )}
               <p className={`mt-4 rounded-xl p-3 text-sm ${scannerErro ? "bg-red-50 text-red-700" : "bg-indigo-50 text-indigo-800"}`}>
-                {scannerErro ||
-                  "Leia o QR Code com a câmara do telemóvel e depois aponte para o código do produto."}
+                {scannerErro || (scannerQr
+                  ? "Leia este QR Code apenas uma vez. A ligação será mantida para produtos e vendas."
+                  : "A aguardar a leitura no telemóvel já emparelhado.")}
               </p>
               <button
                 type="button"
