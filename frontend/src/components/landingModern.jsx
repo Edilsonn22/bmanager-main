@@ -36,6 +36,7 @@ import relatoriosDemo from "../assets/screenshots/relatorios.png";
 import utilizadoresDemo from "../assets/screenshots/utilizadores.png";
 import reciboDemo from "../assets/screenshots/recibo.png";
 import vendaiLogo from "../assets/vendai-logo.png";
+import vendaiLogoDark from "../assets/vendai-logo-dark.png";
 
 const demonstracoes = [
   { nome: "Painel", titulo: "A operação num único olhar", texto: "Indicadores de stock, alertas e movimentos recentes organizados para apoiar decisões rápidas.", imagem: painelDemo },
@@ -104,6 +105,15 @@ const novidadesVenda = [
   [ReceiptText, "Recibo A4 ou térmico", "Gere comprovativos com produtos, quantidades, operador, cliente, totais e pagamento."],
   [RotateCcw, "Devoluções e cancelamentos", "Devolva itens ou cancele uma venda com reposição automática das quantidades no stock."],
   [Calculator, "Lucro histórico correto", "Cada venda conserva preço e custo do momento, mesmo que o produto seja alterado depois."],
+];
+
+const tiposNegocio = [
+  "Lojas e boutiques",
+  "Minimercados",
+  "Farmácias",
+  "Papelarias",
+  "Lojas de informática",
+  "Distribuidores",
 ];
 const moeda = (valor) =>
   Number(valor || 0).toLocaleString("pt-MZ", {
@@ -190,24 +200,30 @@ export default function LandingModern() {
           </Link>
         </div>
       </nav>
+      <div className="landing-mobile-nav relative z-40 flex gap-6 overflow-x-auto border-b border-slate-100 bg-white px-4 py-3 text-xs font-bold text-slate-600 lg:hidden">
+        <a href="#plataforma" onClick={(evento) => irParaSecao(evento, "#plataforma")}>Plataforma</a>
+        <a href="#recursos" onClick={(evento) => irParaSecao(evento, "#recursos")}>Recursos</a>
+        <a href="#como-funciona" onClick={(evento) => irParaSecao(evento, "#como-funciona")}>Como funciona</a>
+        <a href="#planos" onClick={(evento) => irParaSecao(evento, "#planos")}>Planos</a>
+      </div>
       <section className="landing-hero relative z-10 mx-auto grid w-full max-w-7xl items-center gap-10 px-4 pb-16 pt-7 sm:gap-14 sm:px-6 sm:pb-24 sm:pt-12 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,.98fr)] lg:px-8 lg:pb-28 lg:pt-16 2xl:max-w-[1536px] 2xl:gap-20 2xl:pb-32 2xl:pt-20">
         <div className="landing-enter min-w-0 text-center lg:text-left">
           <p className="landing-eyebrow inline-flex max-w-full items-center gap-2 border-l-2 border-indigo-600 pl-3 text-xs font-bold uppercase tracking-[0.16em] text-indigo-700 sm:text-sm">
-            <span>Gestão comercial para pequenas empresas</span>
+            <span>Gestão simples para negócios em crescimento</span>
           </p>
           <h1 className="landing-title mx-auto mt-5 max-w-3xl text-[clamp(2.05rem,8vw,4rem)] font-black leading-[1.05] tracking-[-0.04em] sm:mt-6 lg:mx-0 2xl:max-w-4xl 2xl:text-[4.5rem]">
-            Controle a operação do seu negócio{" "}
+            Venda melhor. Controle o stock.{" "}
             <span className="landing-gradient-text">
-              num único lugar.
+              Decida com clareza.
             </span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-[clamp(1rem,2vw,1.125rem)] leading-7 text-slate-600 sm:mt-6 lg:mx-0 2xl:max-w-2xl 2xl:text-xl 2xl:leading-8">
-            Registe vendas, acompanhe o stock, organize o caixa e consulte os resultados com informação consistente e acessível à sua equipa.
+            O Vendai reúne vendas, produtos, caixa, clientes e relatórios num painel criado para simplificar a gestão diária do seu negócio.
           </p>
           <div className="landing-actions mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:mt-8 lg:justify-start">
             <Link
               to="/registo?plano=1"
-              className="group inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3.5 font-semibold text-white transition hover:bg-indigo-700"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-xl"
             >
               Começar grátis{" "}
               <ArrowRight
@@ -218,7 +234,7 @@ export default function LandingModern() {
             <a
               href="#planos"
               onClick={(evento) => irParaSecao(evento, "#planos")}
-              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-6 py-3.5 font-semibold text-slate-700 transition hover:border-indigo-400 hover:text-indigo-700"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white/90 px-6 py-3.5 font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-400 hover:text-indigo-700"
             >
               Ver planos
             </a>
@@ -240,17 +256,25 @@ export default function LandingModern() {
         </div>
         <DashboardImage />
       </section>
-      <section data-reveal className="landing-reveal relative z-10 border-y border-slate-200 bg-slate-50 py-8">
+      <section data-reveal className="landing-reveal relative z-10 border-y border-slate-200 bg-white py-8 shadow-[0_10px_40px_rgb(15_23_42_/_0.03)]">
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-0 px-4 text-center sm:grid-cols-3 sm:px-6 lg:px-8 2xl:max-w-7xl">
           <Stat numero="14 dias" texto="para testar sem compromisso" />
-          <Stat numero="1 painel" texto="para a operação inteira" />
-          <Stat numero="100%" texto="dos dados isolados por empresa" />
+          <Stat numero="Sem cartão" texto="comece sem compromisso" />
+          <Stat numero="Dados isolados" texto="segurança para cada empresa" />
+        </div>
+      </section>
+      <section data-reveal className="landing-reveal relative z-10 border-b border-slate-200 bg-slate-50/70 px-4 py-9 sm:px-6">
+        <div className="mx-auto max-w-6xl text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Um sistema flexível para diferentes operações</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+            {tiposNegocio.map((tipo) => <span key={tipo} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">{tipo}</span>)}
+          </div>
         </div>
       </section>
       <ProductShowcase />
       <section id="recursos" data-reveal className="landing-reveal relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28 2xl:max-w-[1536px]">
         <div className="max-w-2xl text-center sm:text-left">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-300">
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-600">
             Feito para acompanhar o ritmo
           </p>
           <h2 className="mt-4 text-[clamp(1.75rem,5vw,2.25rem)] font-extrabold leading-tight tracking-tight">
@@ -264,7 +288,7 @@ export default function LandingModern() {
               data-reveal
               className="landing-feature landing-reveal group rounded-xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-md sm:p-7"
             >
-              <span className="grid size-11 place-items-center rounded-xl bg-indigo-400/10 text-indigo-300 transition group-hover:scale-110 group-hover:bg-indigo-400/20">
+              <span className="grid size-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600 transition group-hover:scale-110 group-hover:bg-indigo-100">
                 {createElement(icon, { size: 21 })}
               </span>
               <h3 className="mt-5 text-lg font-bold">{titulo}</h3>
@@ -362,8 +386,8 @@ export default function LandingModern() {
       <footer className="relative z-10 border-t border-slate-800 bg-slate-950 text-slate-300">
         <div className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-[1.35fr_.8fr_1fr] lg:px-8 lg:py-16 2xl:max-w-[1536px]">
           <div>
-            <Link to="/" aria-label="Vendai — página inicial" className="inline-flex rounded-xl bg-white px-3 py-2">
-              <img src={vendaiLogo} alt="Vendai" className="h-9 w-auto object-contain" />
+            <Link to="/" aria-label="Vendai — página inicial" className="inline-flex py-1">
+              <img src={vendaiLogoDark} alt="Vendai" className="h-10 w-auto object-contain sm:h-11" />
             </Link>
             <p className="mt-5 max-w-sm text-sm leading-6 text-slate-400">Gestão simples e integrada para acompanhar vendas, stock, caixa e resultados do seu negócio.</p>
             <Link to="/registo?plano=1" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-white hover:text-indigo-300">Começar gratuitamente <ArrowRight size={16} /></Link>
@@ -402,7 +426,7 @@ export default function LandingModern() {
 function DashboardImage() {
   return (
     <div className="landing-enter landing-delay relative mx-auto w-full min-w-0 max-w-xl 2xl:max-w-2xl">
-      <div className="landing-float absolute -right-3 -top-7 z-20 hidden rounded-2xl border border-white/80 bg-white/85 p-3.5 shadow-xl shadow-indigo-200/60 backdrop-blur sm:block">
+      <div className="landing-float absolute -right-3 -top-7 z-20 hidden rounded-2xl border border-white/80 bg-white/90 p-3.5 shadow-xl shadow-indigo-200/60 backdrop-blur sm:block">
         <div className="flex items-center gap-3">
           <span className="grid size-9 place-items-center rounded-xl bg-emerald-400/15 text-emerald-300">
             <TrendingUp size={18} />
@@ -420,6 +444,15 @@ function DashboardImage() {
           className="h-auto w-full rounded-xl object-contain object-top"
           decoding="async"
         />
+      </div>
+      <div className="landing-float landing-float-delayed absolute -bottom-7 -left-4 z-20 hidden items-center gap-3 rounded-2xl border border-white/80 bg-white/90 p-3.5 shadow-xl shadow-emerald-100/80 backdrop-blur sm:flex">
+        <span className="grid size-9 place-items-center rounded-xl bg-indigo-50 text-indigo-600">
+          <Boxes size={18} />
+        </span>
+        <div>
+          <p className="text-xs text-slate-500">Stock sincronizado</p>
+          <p className="text-sm font-bold text-slate-900">Atualização automática</p>
+        </div>
       </div>
     </div>
   );

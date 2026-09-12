@@ -17,7 +17,8 @@
 .landing-orb-two { top: 17rem; right: 3%; width: 28rem; height: 28rem; background: rgb(186 230 253 / 0.46); animation-delay: -5s; }
 .landing-enter { animation: landing-enter 700ms cubic-bezier(.2,.7,.2,1) both; }
 .landing-delay { animation-delay: 150ms; }
-.landing-float { animation: none; }
+.landing-float { animation: landing-float 5.5s ease-in-out infinite; }
+.landing-float-delayed { animation-delay: -2.75s; }
 .landing-gradient-text { background: linear-gradient(110deg, #7c3aed, #4f46e5 52%, #0284c7); background-clip: text; -webkit-background-clip: text; color: transparent; }
 .landing-feature, .landing-dashboard { will-change: transform; }
 .landing-dashboard { animation: landing-dashboard-breathe 7s ease-in-out infinite; }
@@ -42,6 +43,9 @@
 .landing-showcase-progress { animation: landing-showcase-progress 6s linear both; }
 .landing-showcase-progress.is-paused { animation-play-state: paused; }
 .landing-carousel button:focus-visible { outline: 2px solid rgb(148 163 184 / .75); outline-offset: 3px; }
+.landing-mobile-nav { scrollbar-width: none; }
+.landing-mobile-nav::-webkit-scrollbar { display: none; }
+.landing-mobile-nav a { white-space: nowrap; }
 @media (max-width: 639px) {
   .landing-orb { filter: blur(60px); }
   .landing-orb-one { left: -9rem; width: 20rem; height: 20rem; }
