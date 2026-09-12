@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BarcodeFormat, BrowserMultiFormatReader } from "@zxing/browser";
 import { Camera, CircleCheck, Download, Smartphone, TriangleAlert } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { API_URL } from "../api/authenticatedFetch";
@@ -50,11 +50,26 @@ export default function ScannerMobile() {
   useEffect(() => {
     let ativo = true;
     let controlos;
-    const leitor = new BrowserMultiFormatReader();
+    let temporizadorNativo;
+    let deteccaoNativaEmCurso = false;
+    const leitor = new BrowserMultiFormatReader(undefined, {
+      delayBetweenScanAttempts: 120,
+      delayBetweenScanSuccess: 700,
+    });
+    leitor.possibleFormats = [
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.ITF,
+      BarcodeFormat.CODABAR,
+    ];
 
     const enviar = async (codigo) => {
       const agora = Date.now();
-      if (enviando.current || (codigo === ultimo.current.codigo && agora - ultimo.current.instante < 750)) return;
+      if (enviando.current || (codigo === ultimo.current.codigo && agora - ultimo.current.instante < 1600)) return;
       enviando.current = true;
       ultimo.current = { codigo, instante: agora };
       setErro("");
@@ -87,14 +102,52 @@ export default function ScannerMobile() {
     };
     enviarCodigoRef.current = enviar;
 
+    const iniciarDetetorNativo = async () => {
+      if (!("BarcodeDetector" in window)) return;
+      try {
+        const suportados = await window.BarcodeDetector.getSupportedFormats();
+        const formatos = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "codabar"]
+          .filter((formato) => suportados.includes(formato));
+        if (!formatos.length) return;
+        const detector = new window.BarcodeDetector({ formats: formatos });
+        const detetar = async () => {
+          if (!ativo) return;
+          const video = videoRef.current;
+          if (video?.readyState >= 2 && !deteccaoNativaEmCurso) {
+            deteccaoNativaEmCurso = true;
+            try {
+              const resultado = (await detector.detect(video))[0]?.rawValue;
+              if (resultado) enviar(resultado);
+            } catch {
+              // O ZXing continua ativo como alternativa.
+            } finally {
+              deteccaoNativaEmCurso = false;
+            }
+          }
+          temporizadorNativo = window.setTimeout(detetar, 140);
+        };
+        detetar();
+      } catch {
+        // O navegador não oferece deteção nativa; o ZXing continua ativo.
+      }
+    };
+
     const iniciar = async () => {
       if (!token) return;
       try {
         controlos = await leitor.decodeFromConstraints(
-          { audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+          { audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
           videoRef.current,
           (resultado) => { if (resultado?.getText()) enviar(resultado.getText()); },
         );
+        const faixa = videoRef.current?.srcObject?.getVideoTracks?.()[0];
+        if (faixa?.getCapabilities && faixa?.applyConstraints) {
+          const capacidades = faixa.getCapabilities();
+          if (capacidades.focusMode?.includes?.("continuous")) {
+            await faixa.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+          }
+        }
+        iniciarDetetorNativo();
         if (ativo) setEstado("Pronto para ler");
         else controlos.stop();
       } catch (error) {
@@ -108,6 +161,7 @@ export default function ScannerMobile() {
     iniciar();
     return () => {
       ativo = false;
+      window.clearTimeout(temporizadorNativo);
       controlos?.stop();
       enviarCodigoRef.current = null;
     };
