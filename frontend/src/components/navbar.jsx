@@ -144,7 +144,7 @@ export default function Navbar() {
             <img
               src={vendaiLogo}
               alt="Vendai"
-              className="h-auto w-28 object-contain"
+              className="h-9 w-auto max-w-32 object-contain"
             />
           </NavLink>
           <button

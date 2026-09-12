@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { register } from "../api/api";
 import { useAuth } from "../features/auth/AuthContext";
 import { Feedback } from "./ui/Feedback";
+import vendaiLogo from "../assets/vendai-logo.png";
 
 export default function Register() {
   const [form, setForm] = useState({ nome: "", empresa_nome: "", email: "", senha: "", confirmarSenha: "" });
@@ -26,6 +27,9 @@ export default function Register() {
 
   return <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
     <form onSubmit={handleSubmit} className="w-full min-w-0 max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-xl sm:p-8">
+      <Link to="/" aria-label="Voltar à página inicial" className="inline-flex">
+        <img src={vendaiLogo} alt="Vendai" className="h-10 w-auto max-w-36 object-contain" />
+      </Link>
       <div><h1 className="text-2xl font-bold text-slate-900">Criar empresa</h1><p className="mt-1 text-slate-500">O seu utilizador será o administrador da empresa.</p></div>
       <Feedback tipo="erro">{erro}</Feedback>
       <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-sm text-indigo-800">Plano selecionado: <strong>Plano {planoId}</strong>. Poderá rever os detalhes antes de qualquer pagamento.</div>

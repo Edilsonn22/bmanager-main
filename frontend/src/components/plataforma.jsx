@@ -3,6 +3,7 @@ import { CheckCircle2, Clock3, Eye, Inbox, LogOut, X, XCircle } from "lucide-rea
 import { useNavigate } from "react-router-dom";
 import { API_URL as API } from "../api/authenticatedFetch";
 import { useAuth } from "../features/auth/AuthContext";
+import vendaiLogo from "../assets/vendai-logo.png";
 
 const nomeEstado = { aberto: "Recebida", em_andamento: "Em análise", resolvido: "Resolvida", fechado: "Encerrada" };
 const corEstado = { aberto: "bg-blue-100 text-blue-700", em_andamento: "bg-amber-100 text-amber-700", resolvido: "bg-emerald-100 text-emerald-700", fechado: "bg-slate-100 text-slate-600" };
@@ -42,7 +43,7 @@ export default function Plataforma() {
   const pendentes = solicitacoes.filter((item) => ["aberto", "em_andamento"].includes(item.estado)).length;
 
   return <main className="flex-1 overflow-auto bg-slate-50 p-5 md:p-7">
-    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold text-slate-900">Painel do proprietário</h1><p className="mt-1 text-slate-600">Visão global da Vendai e atendimento aos clientes.</p></div><button type="button" onClick={() => { terminarSessao(); navigate("/login", { replace: true }); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-100"><LogOut size={17} />Terminar sessão</button></header>
+    <header className="flex flex-wrap items-start justify-between gap-4"><div className="flex items-center gap-4"><img src={vendaiLogo} alt="Vendai" className="h-10 w-auto max-w-36 rounded-lg bg-white object-contain"/><div><h1 className="text-2xl font-bold text-slate-900">Painel do proprietário</h1><p className="mt-1 text-slate-600">Visão global da Vendai e atendimento aos clientes.</p></div></div><button type="button" onClick={() => { terminarSessao(); navigate("/login", { replace: true }); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-100"><LogOut size={17} />Terminar sessão</button></header>
     {erro && <p className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-700">{erro}</p>}
     <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[["Empresas", dados.resumo.empresas], ["Utilizadores", dados.resumo.usuarios], ["Assinaturas ativas", ativos], ["Solicitações pendentes", pendentes]].map(([nome, valor]) => <section key={nome} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">{nome}</p><p className="mt-2 text-2xl font-bold text-slate-900">{valor}</p></section>)}</div>
 

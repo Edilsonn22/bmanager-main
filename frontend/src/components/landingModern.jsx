@@ -166,7 +166,7 @@ export default function LandingModern() {
           <img
             src={vendaiLogo}
             alt="Vendai"
-            className="landing-logo h-auto w-24 object-contain sm:w-28 2xl:w-32"
+            className="landing-logo h-8 w-auto max-w-[7.5rem] object-contain sm:h-9 2xl:h-10"
           />
         </Link>
         <div className="hidden items-center gap-7 text-sm font-semibold text-slate-600 lg:flex">
@@ -363,7 +363,7 @@ export default function LandingModern() {
         <div className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-[1.35fr_.8fr_1fr] lg:px-8 lg:py-16 2xl:max-w-[1536px]">
           <div>
             <Link to="/" aria-label="Vendai — página inicial" className="inline-flex rounded-xl bg-white px-3 py-2">
-              <img src={vendaiLogo} alt="Vendai" className="h-auto w-28 object-contain" />
+              <img src={vendaiLogo} alt="Vendai" className="h-9 w-auto object-contain" />
             </Link>
             <p className="mt-5 max-w-sm text-sm leading-6 text-slate-400">Gestão simples e integrada para acompanhar vendas, stock, caixa e resultados do seu negócio.</p>
             <Link to="/registo?plano=1" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-white hover:text-indigo-300">Começar gratuitamente <ArrowRight size={16} /></Link>

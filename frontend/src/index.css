@@ -48,7 +48,7 @@
   .landing-orb-two { right: -11rem; width: 23rem; height: 23rem; }
   .landing-grid { background-size: 42px 42px; }
 }
-.landing-logo { display: block; aspect-ratio: 3 / 1; }
+.landing-logo { display: block; }
 @media (max-width: 479px) {
   .landing-title { overflow-wrap: anywhere; }
   .landing-eyebrow { width: 100%; justify-content: center; border-radius: 1rem; }
@@ -57,7 +57,7 @@
 }
 @media (max-width: 359px) {
   .landing-nav { gap: .5rem; padding-left: .75rem; padding-right: .75rem; }
-  .landing-nav .landing-logo { width: 5rem; }
+  .landing-nav .landing-logo { height: 1.75rem; }
   .landing-nav-actions { gap: .5rem; }
   .landing-login-link { display: none; }
   .landing-eyebrow { font-size: .65rem; line-height: 1rem; }

@@ -39,7 +39,7 @@ export default function Login() {
       >
         <div>
           <Link to="/" aria-label="Voltar à página inicial" className="mb-3 inline-flex">
-            <img src={vendaiLogo} alt="Vendai" className="h-auto w-30 object-contain" />
+            <img src={vendaiLogo} alt="Vendai" className="h-10 w-auto max-w-36 object-contain" />
           </Link>
           <h1 className="text-2xl font-bold text-slate-900">
             Entrar no Vendai

@@ -3,6 +3,7 @@ import { BrowserMultiFormatReader } from "@zxing/browser";
 import { Camera, CircleCheck, Download, Smartphone, TriangleAlert } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { API_URL } from "../api/authenticatedFetch";
+import vendaiLogo from "../assets/vendai-logo.png";
 
 export default function ScannerMobile() {
   const { token: tokenRota } = useParams();
@@ -199,6 +200,9 @@ export default function ScannerMobile() {
     return (
       <main className="grid min-h-dvh place-items-center bg-slate-950 p-5 text-white">
         <section className="w-full max-w-sm rounded-3xl border border-white/10 bg-slate-900 p-7 text-center shadow-2xl">
+          <div className="mx-auto mb-5 rounded-xl bg-white px-3 py-2">
+            <img src={vendaiLogo} alt="Vendai" className="mx-auto h-10 w-auto max-w-36 object-contain" />
+          </div>
           <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-indigo-500/15 text-indigo-300">
             <Smartphone size={31} />
           </span>
@@ -215,6 +219,9 @@ export default function ScannerMobile() {
     <main className="min-h-dvh bg-slate-950 p-3 text-white">
       <section className="mx-auto max-w-lg overflow-hidden rounded-2xl bg-slate-900 shadow-2xl">
         <header className="p-5 text-center">
+          <div className="mx-auto mb-4 w-fit rounded-xl bg-white px-3 py-2">
+            <img src={vendaiLogo} alt="Vendai" className="h-9 w-auto max-w-32 object-contain" />
+          </div>
           <Camera className="mx-auto text-emerald-400" />
           <h1 className="mt-2 text-xl font-bold">Scanner Vendai</h1>
           <p className="text-sm text-slate-400">Os produtos serão enviados para o computador.</p>
