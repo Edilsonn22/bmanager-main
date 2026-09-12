@@ -117,7 +117,7 @@ export default function AdicionarProduto() {
   };
 
   useEffect(() => {
-    if (!scannerCampo || !scannerSessao?.id) return undefined;
+    if (!scannerSessao?.id) return undefined;
     let ativo = true;
     const consultar = async () => {
       try {
@@ -134,8 +134,13 @@ export default function AdicionarProduto() {
         }
         const codigo = dados.codigos?.[0]?.codigo;
         if (codigo && ativo) {
-          setForm((atual) => ({ ...atual, [scannerCampo]: codigo }));
-          setSucesso(`Código ${codigo} preenchido pelo telemóvel.`);
+          const campoDestino = scannerCampo || "codigo_barras";
+          setForm((atual) => ({ ...atual, [campoDestino]: codigo }));
+          setSucesso(
+            campoDestino === "embalagem_codigo"
+              ? `Código ${codigo} preenchido na embalagem.`
+              : `Código ${codigo} preenchido automaticamente no produto.`,
+          );
           setScannerCampo("");
           setScannerQr("");
         }
