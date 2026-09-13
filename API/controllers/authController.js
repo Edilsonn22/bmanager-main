@@ -17,9 +17,13 @@ export const register = async (req, res) => {
   let connection;
 
   try {
-    const { nome, email, senha, empresa_nome: empresaNome, plano_id: planoIdRecebido } = req.body;
-    if (!nome?.trim() || !email?.trim() || !senha || !empresaNome?.trim()) {
+    const { nome, email, senha, empresa_nome: empresaNome, empresa_telefone: empresaTelefone, plano_id: planoIdRecebido } = req.body;
+    if (!nome?.trim() || !email?.trim() || !senha || !empresaNome?.trim() || !empresaTelefone?.trim()) {
       return res.status(400).json({ message: "Preencha todos os campos." });
+    }
+    const digitosTelefone = empresaTelefone.replace(/\D/g, "");
+    if (digitosTelefone.length < 8 || digitosTelefone.length > 15) {
+      return res.status(400).json({ message: "Informe um contacto válido para a empresa." });
     }
     if (senha.length < 6) {
       return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
@@ -36,7 +40,8 @@ export const register = async (req, res) => {
     connection = await pool.getConnection();
     await connection.beginTransaction();
     const [empresa] = await connection.query(
-      "INSERT INTO Empresa (nome) VALUES (?)", [empresaNome.trim()]
+      "INSERT INTO Empresa (nome, email, telefone) VALUES (?, ?, ?)",
+      [empresaNome.trim(), emailNormalizado, empresaTelefone.trim()]
     );
     const senhaHash = await bcrypt.hash(senha, 12);
     const [usuario] = await connection.query(

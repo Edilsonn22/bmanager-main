@@ -7,7 +7,7 @@ import { Feedback } from "./ui/Feedback";
 import vendaiLogo from "../assets/vendai-logo.png";
 
 export default function Register() {
-  const [form, setForm] = useState({ nome: "", empresa_nome: "", email: "", senha: "", confirmarSenha: "" });
+  const [form, setForm] = useState({ nome: "", empresa_nome: "", empresa_telefone: "", email: "", senha: "", confirmarSenha: "" });
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -35,6 +35,7 @@ export default function Register() {
       <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-sm text-indigo-800">Plano selecionado: <strong>Plano {planoId}</strong>. Poderá rever os detalhes antes de qualquer pagamento.</div>
       <label className="block text-sm font-medium">Nome<input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={form.nome} onChange={alterar("nome")} required /></label>
       <label className="block text-sm font-medium">Nome da empresa<input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={form.empresa_nome} onChange={alterar("empresa_nome")} required /></label>
+      <label className="block text-sm font-medium">Contacto da empresa<input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" type="tel" inputMode="tel" autoComplete="tel" placeholder="Ex.: +258 84 123 4567" value={form.empresa_telefone} onChange={alterar("empresa_telefone")} minLength="8" maxLength="25" required /><small className="mt-1 block font-normal text-slate-500">Será usado para identificar e contactar a empresa.</small></label>
       <label className="block text-sm font-medium">E-mail<input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" type="email" value={form.email} onChange={alterar("email")} required /></label>
       <label className="block text-sm font-medium">Senha<span className="relative mt-1 block"><input className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-11" type={mostrarSenha ? "text" : "password"} minLength="8" value={form.senha} onChange={alterar("senha")} aria-describedby="senha-ajuda" required /><button type="button" onClick={() => setMostrarSenha((v) => !v)} aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500">{mostrarSenha ? <EyeOff size={18}/> : <Eye size={18}/>}</button></span><small id="senha-ajuda" className="mt-1 block font-normal text-slate-500">Use pelo menos 8 caracteres.</small></label>
       <label className="block text-sm font-medium">Confirmar senha<input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" type={mostrarSenha ? "text" : "password"} minLength="8" value={form.confirmarSenha} onChange={alterar("confirmarSenha")} required /></label>

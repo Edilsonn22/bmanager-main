@@ -27,7 +27,7 @@ export const resumoPlataforma = async (_req, res) => {
 };
 
 export const listarEmpresas = async (_req, res) => {
-  const [empresas] = await pool.query(`SELECT e.id, e.nome, e.bloqueada, e.created_at, a.estado AS assinatura_estado, a.expira_em, p.nome AS plano,
+  const [empresas] = await pool.query(`SELECT e.id, e.nome, e.nuit, e.email, e.telefone, e.endereco, e.bloqueada, e.created_at, a.estado AS assinatura_estado, a.expira_em, p.nome AS plano,
     (SELECT COUNT(*) FROM Usuario u WHERE u.empresa_id = e.id) AS usuarios,
     (SELECT COUNT(*) FROM Produto pr WHERE pr.empresa_id = e.id) AS produtos
     FROM Empresa e LEFT JOIN assinaturas a ON a.empresa_id = e.id LEFT JOIN planos p ON p.id = a.plano_id ORDER BY e.created_at DESC`);

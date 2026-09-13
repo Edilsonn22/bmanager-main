@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock3, Eye, Inbox, LogOut, Search, Users, X, XCircle } from "lucide-react";
+import { Building2, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Eye, Inbox, LogOut, Mail, Phone, Search, Users, X, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_URL as API } from "../api/authenticatedFetch";
 import { useAuth } from "../features/auth/AuthContext";
@@ -13,6 +13,7 @@ export default function Plataforma() {
   const navigate = useNavigate();
   const [dados, setDados] = useState(null);
   const [solicitacoes, setSolicitacoes] = useState([]);
+  const [empresas, setEmpresas] = useState([]);
   const [utilizadores, setUtilizadores] = useState([]);
   const [paginacao, setPaginacao] = useState({ pagina: 1, total: 0, total_paginas: 1 });
   const [busca, setBusca] = useState("");
@@ -25,7 +26,8 @@ export default function Plataforma() {
       fetch(`${API}/plataforma/resumo`).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.erro); return d; }),
       fetch(`${API}/suporte/admin/tickets`).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.erro); return d.tickets || []; }),
       fetch(`${API}/plataforma/utilizadores?limite=20`).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.erro); return d; }),
-    ]).then(([resumo, tickets, pessoas]) => { setDados(resumo); setSolicitacoes(tickets); setUtilizadores(pessoas.utilizadores || []); setPaginacao(pessoas.paginacao); }).catch((e) => setErro(e.message));
+      fetch(`${API}/plataforma/empresas`).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.erro); return d.empresas || []; }),
+    ]).then(([resumo, tickets, pessoas, listaEmpresas]) => { setDados(resumo); setSolicitacoes(tickets); setUtilizadores(pessoas.utilizadores || []); setPaginacao(pessoas.paginacao); setEmpresas(listaEmpresas); }).catch((e) => setErro(e.message));
   }, []);
 
   const carregarUtilizadores = async (pagina = 1, termo = busca) => {
@@ -69,12 +71,24 @@ export default function Plataforma() {
     {erro && <p className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-700">{erro}</p>}
     <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[["Empresas", dados.resumo.empresas], ["Utilizadores", dados.resumo.usuarios], ["Assinaturas ativas", ativos], ["Solicitações pendentes", pendentes]].map(([nome, valor]) => <section key={nome} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">{nome}</p><p className="mt-2 text-2xl font-bold text-slate-900">{valor}</p></section>)}</div>
 
-    <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <nav aria-label="Secções do painel" className="mt-5 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+      {[["empresas", "Empresas"], ["suporte", "Suporte"], ["pessoas", "Pessoas"], ["pagamentos", "Pagamentos"]].map(([id, nome]) => <a key={id} href={`#${id}`} className="shrink-0 rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-indigo-50 hover:text-indigo-700">{nome}</a>)}
+    </nav>
+
+    <section id="empresas" className="mt-6 scroll-mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-100 p-5"><div><h2 className="font-semibold text-slate-900">Empresas registadas</h2><p className="text-sm text-slate-500">Contactos, plano e dimensão de cada conta.</p></div><span className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600"><Building2 size={20}/></span></div>
+      {empresas.length ? <>
+        <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[900px] text-left text-sm"><thead><tr><th>Empresa</th><th>Contacto</th><th>Plano</th><th>Utilização</th><th>Estado</th><th>Registo</th></tr></thead><tbody>{empresas.map((empresa) => <tr key={empresa.id}><td><span className="block font-semibold text-slate-800">{empresa.nome}</span><small className="text-slate-500">{empresa.nuit ? `NUIT: ${empresa.nuit}` : "NUIT não informado"}</small></td><td><span className="flex items-center gap-1.5"><Phone size={14} className="text-slate-400"/>{empresa.telefone || "Não informado"}</span><small className="mt-1 flex items-center gap-1.5 text-slate-500"><Mail size={14}/>{empresa.email || "Sem e-mail"}</small></td><td><span className="block">{empresa.plano || "Sem plano"}</span><small className="capitalize text-slate-500">{empresa.assinatura_estado || "Sem assinatura"}</small></td><td><span className="block">{empresa.usuarios} utilizador(es)</span><small className="text-slate-500">{empresa.produtos} produto(s)</small></td><td><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${empresa.bloqueada ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>{empresa.bloqueada ? "Bloqueada" : "Ativa"}</span></td><td>{new Date(empresa.created_at).toLocaleDateString("pt-MZ")}</td></tr>)}</tbody></table></div>
+        <div className="grid gap-3 p-4 md:hidden">{empresas.map((empresa) => <article key={empresa.id} className="rounded-2xl border border-slate-200 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold text-slate-900">{empresa.nome}</h3><p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600"><Phone size={14}/>{empresa.telefone || "Contacto não informado"}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${empresa.bloqueada ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>{empresa.bloqueada ? "Bloqueada" : "Ativa"}</span></div><p className="mt-2 flex items-center gap-1.5 break-all text-sm text-slate-500"><Mail size={14}/>{empresa.email || "Sem e-mail"}</p><dl className="mt-4 grid grid-cols-3 gap-2 text-sm"><div><dt className="text-slate-400">Plano</dt><dd className="font-medium">{empresa.plano || "—"}</dd></div><div><dt className="text-slate-400">Pessoas</dt><dd className="font-medium">{empresa.usuarios}</dd></div><div><dt className="text-slate-400">Produtos</dt><dd className="font-medium">{empresa.produtos}</dd></div></dl></article>)}</div>
+      </> : <p className="p-8 text-center text-slate-500">Nenhuma empresa registada.</p>}
+    </section>
+
+    <section id="suporte" className="mt-6 scroll-mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 p-5"><div><h2 className="font-semibold text-slate-900">Solicitações de suporte</h2><p className="text-sm text-slate-500">Abrir uma solicitação altera o estado para “Em análise”.</p></div><span className="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-600"><Inbox size={20} /></span></div>
       {solicitacoes.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead><tr><th>Empresa</th><th>Assunto</th><th>Enviada por</th><th>Estado</th><th>Data</th><th className="text-right">Ação</th></tr></thead><tbody>{solicitacoes.map((ticket) => <tr key={ticket.id}><td>{ticket.empresa}</td><td>{ticket.assunto}</td><td><span className="block">{ticket.utilizador}</span><small className="text-slate-400">{ticket.email}</small></td><td><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${corEstado[ticket.estado]}`}>{ticket.estado === "resolvido" && <CheckCircle2 size={14} />}{nomeEstado[ticket.estado]}</span></td><td>{new Date(ticket.created_at).toLocaleDateString("pt-MZ")}</td><td className="text-right"><button type="button" onClick={() => abrir(ticket)} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-indigo-600 hover:bg-indigo-50"><Eye size={16} />Abrir</button></td></tr>)}</tbody></table></div> : <p className="p-8 text-center text-slate-500">Nenhuma solicitação recebida.</p>}
     </section>
 
-    <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section id="pessoas" className="mt-6 scroll-mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-col gap-4 border-b border-slate-100 p-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-600"><Users size={20} /></span><div><h2 className="font-semibold text-slate-900">Pessoas registadas</h2><p className="text-sm text-slate-500">{paginacao.total} utilizador{paginacao.total === 1 ? "" : "es"} no sistema.</p></div></div>
         <form onSubmit={pesquisarUtilizadores} className="flex w-full gap-2 lg:max-w-md"><label className="relative flex-1"><span className="sr-only">Pesquisar pessoas</span><Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, e-mail ou empresa" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"/></label><button type="submit" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Pesquisar</button></form>
@@ -86,7 +100,7 @@ export default function Plataforma() {
       </> : <p className="p-8 text-center text-slate-500">Nenhuma pessoa encontrada.</p>}
     </section>
 
-    <section className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="font-semibold">Pagamentos recentes</h2><table className="mt-4 w-full text-left text-sm"><thead><tr><th>Empresa</th><th>Referência</th><th>Valor</th><th>Estado</th></tr></thead><tbody>{dados.pagamentos_recentes.map((pagamento) => <tr key={pagamento.referencia}><td>{pagamento.empresa}</td><td>{pagamento.referencia}</td><td>{pagamento.valor} {pagamento.moeda}</td><td>{pagamento.estado}</td></tr>)}</tbody></table></section>
+    <section id="pagamentos" className="mt-6 scroll-mt-5 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="font-semibold">Pagamentos recentes</h2><table className="mt-4 w-full text-left text-sm"><thead><tr><th>Empresa</th><th>Referência</th><th>Valor</th><th>Estado</th></tr></thead><tbody>{dados.pagamentos_recentes.map((pagamento) => <tr key={pagamento.referencia}><td>{pagamento.empresa}</td><td>{pagamento.referencia}</td><td>{pagamento.valor} {pagamento.moeda}</td><td>{pagamento.estado}</td></tr>)}</tbody></table></section>
 
     {selecionada && <div className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="solicitacao-titulo"><article className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
       <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-indigo-600">{selecionada.empresa}</p><h2 id="solicitacao-titulo" className="mt-1 text-xl font-bold text-slate-900">{selecionada.assunto}</h2><p className="mt-1 text-sm text-slate-500">Enviada por {selecionada.utilizador} · {new Date(selecionada.created_at).toLocaleDateString("pt-MZ")}</p></div><button type="button" onClick={() => setSelecionada(null)} aria-label="Fechar" className="rounded-full p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div>
