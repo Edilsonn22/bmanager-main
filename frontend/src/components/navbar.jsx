@@ -132,7 +132,7 @@ export default function Navbar() {
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white p-4 shadow-2xl transition-transform duration-300 md:relative md:z-auto md:translate-x-0 md:shadow-none ${aberto ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-67 flex-col border-r border-slate-200 bg-white p-4 shadow-2xl transition-transform duration-300 md:relative md:z-auto md:translate-x-0 md:shadow-none ${aberto ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex min-h-14 items-center justify-between border-b border-slate-100 px-2 pb-5">
           <NavLink
