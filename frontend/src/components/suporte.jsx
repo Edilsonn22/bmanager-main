@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, CircleHelp, MessageSquarePlus, Send } from "lucide-react";
+import { CalendarClock, CheckCircle2, CircleHelp, MessageSquarePlus, Send } from "lucide-react";
 import { API_URL } from "../api/authenticatedFetch";
 
 const corEstado = {
@@ -155,9 +155,11 @@ export default function Suporte() {
                   <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
                     {ticket.mensagem}
                   </p>
-                  <p className="mt-3 text-xs text-slate-400">
-                    Enviada em{" "}
-                    {new Date(ticket.created_at).toLocaleDateString("pt-MZ")}
+                  <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                    <CalendarClock size={14} aria-hidden="true" />
+                    <time dateTime={ticket.created_at}>
+                      Enviada em {new Date(ticket.created_at).toLocaleDateString("pt-MZ", { day: "2-digit", month: "long", year: "numeric" })}, às {new Date(ticket.created_at).toLocaleTimeString("pt-MZ", { hour: "2-digit", minute: "2-digit" })}
+                    </time>
                   </p>
                 </article>
               ))}

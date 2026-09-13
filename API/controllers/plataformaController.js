@@ -33,4 +33,48 @@ export const listarEmpresas = async (_req, res) => {
     FROM Empresa e LEFT JOIN assinaturas a ON a.empresa_id = e.id LEFT JOIN planos p ON p.id = a.plano_id ORDER BY e.created_at DESC`);
   return res.json({ sucesso: true, empresas });
 };
+export const listarUtilizadores = async (req, res) => {
+  try {
+    const busca = String(req.query.busca || "").trim().slice(0, 100);
+    const pagina = Math.max(Number.parseInt(req.query.pagina, 10) || 1, 1);
+    const limite = Math.min(Math.max(Number.parseInt(req.query.limite, 10) || 20, 1), 100);
+    const offset = (pagina - 1) * limite;
+    const termo = `%${busca}%`;
+    const filtro = busca ? "WHERE u.nome LIKE ? OR u.email LIKE ? OR e.nome LIKE ?" : "";
+    const parametros = busca ? [termo, termo, termo] : [];
+
+    const [[utilizadores], [contagem]] = await Promise.all([
+      pool.query(
+        `SELECT u.id, u.nome, u.email, u.role, u.created_at,
+                e.id AS empresa_id, e.nome AS empresa, e.email AS empresa_email,
+                e.telefone AS empresa_telefone, e.bloqueada,
+                p.nome AS plano, a.estado AS assinatura_estado
+         FROM Usuario u
+         INNER JOIN Empresa e ON e.id = u.empresa_id
+         LEFT JOIN assinaturas a ON a.empresa_id = e.id
+         LEFT JOIN planos p ON p.id = a.plano_id
+         ${filtro}
+         ORDER BY u.created_at DESC
+         LIMIT ${limite} OFFSET ${offset}`,
+        parametros,
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS total FROM Usuario u
+         INNER JOIN Empresa e ON e.id = u.empresa_id ${filtro}`,
+        parametros,
+      ),
+    ]);
+
+    const total = Number(contagem[0]?.total || 0);
+    return res.json({
+      sucesso: true,
+      utilizadores,
+      paginacao: { pagina, limite, total, total_paginas: Math.max(Math.ceil(total / limite), 1) },
+    });
+  } catch (error) {
+    console.error("Erro ao listar utilizadores da plataforma:", error.message);
+    return res.status(500).json({ sucesso: false, erro: "Não foi possível carregar os utilizadores registados." });
+  }
+};
+
 export const alternarBloqueioEmpresa = async (req, res) => { const [r] = await pool.execute("UPDATE Empresa SET bloqueada = NOT bloqueada WHERE id = ?", [req.params.id]); return r.affectedRows ? res.json({ sucesso: true }) : res.status(404).json({ sucesso: false, erro: "Empresa não encontrada." }); };

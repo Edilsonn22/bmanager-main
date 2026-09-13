@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock3, Eye, Inbox, LogOut, X, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock3, Eye, Inbox, LogOut, Search, Users, X, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_URL as API } from "../api/authenticatedFetch";
 import { useAuth } from "../features/auth/AuthContext";
@@ -13,6 +13,9 @@ export default function Plataforma() {
   const navigate = useNavigate();
   const [dados, setDados] = useState(null);
   const [solicitacoes, setSolicitacoes] = useState([]);
+  const [utilizadores, setUtilizadores] = useState([]);
+  const [paginacao, setPaginacao] = useState({ pagina: 1, total: 0, total_paginas: 1 });
+  const [busca, setBusca] = useState("");
   const [selecionada, setSelecionada] = useState(null);
   const [erro, setErro] = useState("");
   const [atualizando, setAtualizando] = useState(false);
@@ -21,8 +24,27 @@ export default function Plataforma() {
     Promise.all([
       fetch(`${API}/plataforma/resumo`).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.erro); return d; }),
       fetch(`${API}/suporte/admin/tickets`).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.erro); return d.tickets || []; }),
-    ]).then(([resumo, tickets]) => { setDados(resumo); setSolicitacoes(tickets); }).catch((e) => setErro(e.message));
+      fetch(`${API}/plataforma/utilizadores?limite=20`).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.erro); return d; }),
+    ]).then(([resumo, tickets, pessoas]) => { setDados(resumo); setSolicitacoes(tickets); setUtilizadores(pessoas.utilizadores || []); setPaginacao(pessoas.paginacao); }).catch((e) => setErro(e.message));
   }, []);
+
+  const carregarUtilizadores = async (pagina = 1, termo = busca) => {
+    try {
+      setErro("");
+      const parametros = new URLSearchParams({ pagina: String(pagina), limite: "20" });
+      if (termo.trim()) parametros.set("busca", termo.trim());
+      const resposta = await fetch(`${API}/plataforma/utilizadores?${parametros}`);
+      const resultado = await resposta.json();
+      if (!resposta.ok) throw new Error(resultado.erro || "Não foi possível carregar os utilizadores.");
+      setUtilizadores(resultado.utilizadores || []);
+      setPaginacao(resultado.paginacao);
+    } catch (error) { setErro(error.message); }
+  };
+
+  const pesquisarUtilizadores = (evento) => {
+    evento.preventDefault();
+    carregarUtilizadores(1);
+  };
 
   const alterarEstado = async (ticket, estado) => {
     setAtualizando(true); setErro("");
@@ -50,6 +72,18 @@ export default function Plataforma() {
     <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 p-5"><div><h2 className="font-semibold text-slate-900">Solicitações de suporte</h2><p className="text-sm text-slate-500">Abrir uma solicitação altera o estado para “Em análise”.</p></div><span className="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-600"><Inbox size={20} /></span></div>
       {solicitacoes.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead><tr><th>Empresa</th><th>Assunto</th><th>Enviada por</th><th>Estado</th><th>Data</th><th className="text-right">Ação</th></tr></thead><tbody>{solicitacoes.map((ticket) => <tr key={ticket.id}><td>{ticket.empresa}</td><td>{ticket.assunto}</td><td><span className="block">{ticket.utilizador}</span><small className="text-slate-400">{ticket.email}</small></td><td><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${corEstado[ticket.estado]}`}>{ticket.estado === "resolvido" && <CheckCircle2 size={14} />}{nomeEstado[ticket.estado]}</span></td><td>{new Date(ticket.created_at).toLocaleDateString("pt-MZ")}</td><td className="text-right"><button type="button" onClick={() => abrir(ticket)} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-indigo-600 hover:bg-indigo-50"><Eye size={16} />Abrir</button></td></tr>)}</tbody></table></div> : <p className="p-8 text-center text-slate-500">Nenhuma solicitação recebida.</p>}
+    </section>
+
+    <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-4 border-b border-slate-100 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-600"><Users size={20} /></span><div><h2 className="font-semibold text-slate-900">Pessoas registadas</h2><p className="text-sm text-slate-500">{paginacao.total} utilizador{paginacao.total === 1 ? "" : "es"} no sistema.</p></div></div>
+        <form onSubmit={pesquisarUtilizadores} className="flex w-full gap-2 lg:max-w-md"><label className="relative flex-1"><span className="sr-only">Pesquisar pessoas</span><Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, e-mail ou empresa" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"/></label><button type="submit" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">Pesquisar</button></form>
+      </div>
+      {utilizadores.length ? <>
+        <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[850px] text-left text-sm"><thead><tr><th>Pessoa</th><th>Empresa</th><th>Perfil</th><th>Plano</th><th>Contacto da empresa</th><th>Registo</th></tr></thead><tbody>{utilizadores.map((pessoa) => <tr key={pessoa.id}><td><span className="block font-semibold text-slate-800">{pessoa.nome}</span><small className="text-slate-500">{pessoa.email}</small></td><td><span className="block">{pessoa.empresa}</span>{Boolean(pessoa.bloqueada) && <small className="font-semibold text-red-600">Bloqueada</small>}</td><td className="capitalize">{pessoa.role}</td><td><span className="block">{pessoa.plano || "Sem plano"}</span><small className="capitalize text-slate-500">{pessoa.assinatura_estado || "Sem assinatura"}</small></td><td><span className="block">{pessoa.empresa_telefone || "—"}</span><small className="text-slate-500">{pessoa.empresa_email || ""}</small></td><td>{new Date(pessoa.created_at).toLocaleDateString("pt-MZ")}</td></tr>)}</tbody></table></div>
+        <div className="grid gap-3 p-4 md:hidden">{utilizadores.map((pessoa) => <article key={pessoa.id} className="rounded-2xl border border-slate-200 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold text-slate-900">{pessoa.nome}</h3><p className="break-all text-sm text-slate-500">{pessoa.email}</p></div><span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold capitalize text-indigo-700">{pessoa.role}</span></div><dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-400">Empresa</dt><dd className="font-medium text-slate-700">{pessoa.empresa}</dd></div><div><dt className="text-slate-400">Plano</dt><dd className="font-medium text-slate-700">{pessoa.plano || "Sem plano"}</dd></div><div><dt className="text-slate-400">Contacto</dt><dd className="font-medium text-slate-700">{pessoa.empresa_telefone || "—"}</dd></div><div><dt className="text-slate-400">Registo</dt><dd className="font-medium text-slate-700">{new Date(pessoa.created_at).toLocaleDateString("pt-MZ")}</dd></div></dl></article>)}</div>
+        <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4"><p className="text-sm text-slate-500">Página {paginacao.pagina} de {paginacao.total_paginas}</p><div className="flex gap-2"><button type="button" aria-label="Página anterior" disabled={paginacao.pagina <= 1} onClick={() => carregarUtilizadores(paginacao.pagina - 1)} className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={18}/></button><button type="button" aria-label="Página seguinte" disabled={paginacao.pagina >= paginacao.total_paginas} onClick={() => carregarUtilizadores(paginacao.pagina + 1)} className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={18}/></button></div></div>
+      </> : <p className="p-8 text-center text-slate-500">Nenhuma pessoa encontrada.</p>}
     </section>
 
     <section className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="font-semibold">Pagamentos recentes</h2><table className="mt-4 w-full text-left text-sm"><thead><tr><th>Empresa</th><th>Referência</th><th>Valor</th><th>Estado</th></tr></thead><tbody>{dados.pagamentos_recentes.map((pagamento) => <tr key={pagamento.referencia}><td>{pagamento.empresa}</td><td>{pagamento.referencia}</td><td>{pagamento.valor} {pagamento.moeda}</td><td>{pagamento.estado}</td></tr>)}</tbody></table></section>

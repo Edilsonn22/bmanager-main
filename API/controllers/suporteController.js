@@ -7,7 +7,13 @@ export const criarTicket = async (req, res) => {
   await auditar({ empresaId: req.user.empresa_id, usuarioId: req.user.id, acao: "criar", entidade: "ticket", entidadeId: r.insertId });
   return res.status(201).json({ sucesso: true, id: r.insertId });
 };
-export const meusTickets = async (req, res) => { const [tickets] = await pool.execute("SELECT id, assunto, mensagem, estado, created_at FROM tickets_suporte WHERE empresa_id = ? ORDER BY created_at DESC", [req.user.empresa_id]); return res.json({ sucesso: true, tickets }); };
+export const meusTickets = async (req, res) => {
+  const [tickets] = await pool.execute(
+    "SELECT id, assunto, mensagem, estado, created_at, updated_at FROM tickets_suporte WHERE empresa_id = ? AND usuario_id = ? ORDER BY created_at DESC",
+    [req.user.empresa_id, req.user.id],
+  );
+  return res.json({ sucesso: true, tickets });
+};
 export const todosTickets = async (_req, res) => { const [tickets] = await pool.query("SELECT t.id, t.assunto, t.mensagem, t.estado, t.created_at, t.updated_at, e.nome AS empresa, u.nome AS utilizador, u.email FROM tickets_suporte t INNER JOIN Empresa e ON e.id = t.empresa_id INNER JOIN Usuario u ON u.id = t.usuario_id ORDER BY FIELD(t.estado, 'aberto', 'em_andamento', 'resolvido', 'fechado'), t.updated_at DESC"); return res.json({ sucesso: true, tickets }); };
 
 export const atualizarEstadoTicket = async (req, res) => {

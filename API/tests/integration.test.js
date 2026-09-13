@@ -196,11 +196,19 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
     assert.equal(conta.body.conta.empresa_endereco, "Maputo");
   });
 
-  test("suporte cria e lista apenas tickets da própria empresa", async () => {
+  test("suporte lista apenas tickets enviados pelo próprio utilizador", async () => {
     const empresaA = await criarEmpresaComAdmin("Empresa Suporte A", "suporte-a@teste.local");
     const empresaB = await criarEmpresaComAdmin("Empresa Suporte B", "suporte-b@teste.local");
     const tokenA = await iniciarSessao(empresaA);
     const tokenB = await iniciarSessao(empresaB);
+    const bcrypt = (await import("bcryptjs")).default;
+    const emailOperador = "operador-suporte@teste.local";
+    const senhaOperador = "SenhaTeste123";
+    await pool.execute(
+      "INSERT INTO Usuario (nome, email, senha, empresa_id, role) VALUES (?, ?, ?, ?, 'operador')",
+      ["Operador Suporte", emailOperador, await bcrypt.hash(senhaOperador, 10), empresaA.empresaId],
+    );
+    const tokenOperador = await iniciarSessao({ email: emailOperador, senha: senhaOperador });
     const criado = await resposta("/api/suporte/tickets", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenA}` },
@@ -209,9 +217,11 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
     assert.equal(criado.status, 201);
     const ticketsA = await resposta("/api/suporte/tickets", { headers: { Authorization: `Bearer ${tokenA}` } });
     const ticketsB = await resposta("/api/suporte/tickets", { headers: { Authorization: `Bearer ${tokenB}` } });
+    const ticketsOperador = await resposta("/api/suporte/tickets", { headers: { Authorization: `Bearer ${tokenOperador}` } });
     assert.equal(ticketsA.body.tickets.length, 1);
     assert.equal(ticketsA.body.tickets[0].assunto, "Preciso de ajuda");
     assert.equal(ticketsB.body.tickets.length, 0);
+    assert.equal(ticketsOperador.body.tickets.length, 0);
   });
 
   test("fatura apresenta dados legais e não vaza entre empresas", async () => {
