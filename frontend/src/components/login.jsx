@@ -23,7 +23,12 @@ export default function Login() {
     try {
       const sessao = await login({ email, senha });
       iniciarSessao(sessao);
-      navigate(location.state?.from?.pathname || "/painel", { replace: true });
+      const proprietario = sessao.usuario?.tipo_conta === "platform_owner";
+      const destinoAnterior = location.state?.from?.pathname;
+      const destinoSeguro = destinoAnterior && !destinoAnterior.startsWith("/admin/")
+        ? destinoAnterior
+        : "/painel";
+      navigate(proprietario ? "/admin/sistema" : destinoSeguro, { replace: true, state: null });
     } catch (error) {
       setErro(error.message);
     } finally {

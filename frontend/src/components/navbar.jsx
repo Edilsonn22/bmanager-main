@@ -4,6 +4,7 @@ import {
   ArrowLeftRight,
   BarChart3,
   Banknote,
+  BookOpen,
   ChartColumn,
   CircleUserRound,
   CreditCard,
@@ -13,7 +14,6 @@ import {
   Package,
   ReceiptText,
   ShoppingCart,
-  Sparkles,
   Tags,
   UserCog,
   Users,
@@ -196,8 +196,8 @@ export default function Navbar() {
             }}
             className="mb-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-50"
           >
-            <Sparkles size={18} />
-            Ver guia do sistema
+            <BookOpen size={18} />
+            Guia rápido
           </button>
           <NavLink
             to="/perfil"
