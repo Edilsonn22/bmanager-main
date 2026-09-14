@@ -34,10 +34,12 @@ const checksumsHistoricos = {
   "005_operacao_saas.sql": [
     "bb760fac9368ff1319d9a8c6c5f78257ce0b05d831d5601969d16937b687d7bd",
     "6b59d8368320cd593faaa2fc2fb68505a59ce3e821a3d44adc37e7a28b37393a",
+    "0f182f41df9a35ed7b9a6f97e599c4b51f74133bd3ddc97a11db1233d074eabe",
   ],
   "011_vendas_clientes_caixa.sql": [
     "15534d13e270d8af32325745853989a61e89e95431b31ed19652c614bddee372",
     "e540b8581cd5453d360939af8a990a99f24aa4826b83ad8fc1b2981fd23b9cf6",
+    "616662c1ceafb50f3ba99b171e9491403d42b93eb76da00619dfbe80176266a1",
   ],
 };
 
@@ -142,7 +144,7 @@ try {
   for (const migration of migrations) {
     const aplicada = aplicadas.get(migration.nome);
     if (aplicada && !migration.checksumsAceitos.has(aplicada.checksum)) {
-      throw new Error(`A migração já aplicada foi alterada: ${migration.nome}`);
+      throw new Error(`A migração já aplicada foi alterada: ${migration.nome} (checksum registado: ${aplicada.checksum})`);
     }
   }
 
