@@ -81,8 +81,10 @@ CREATE TABLE Produto (
   estoque_minimo INT NOT NULL DEFAULT 5,
   tipo_produto ENUM('simples','multiplas') NOT NULL DEFAULT 'simples',
   unidade_base VARCHAR(50) NOT NULL DEFAULT 'Unidade',
+  arquivado_em DATETIME DEFAULT NULL,
   PRIMARY KEY (id),
   KEY idx_produto_empresa (empresa_id),
+  KEY idx_produto_empresa_arquivado (empresa_id, arquivado_em),
   KEY idx_produto_categoria (idCategoria),
   KEY idx_produto_fornecedor (idFornecedor),
   CONSTRAINT fk_produto_empresa FOREIGN KEY (empresa_id) REFERENCES Empresa(id)

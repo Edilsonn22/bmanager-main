@@ -79,12 +79,12 @@ export const agendarDowngrade = async (req, res) => {
          WHERE a.empresa_id = ? AND a.estado = 'ativa'`,
         [req.user.empresa_id],
       ),
-      pool.execute("SELECT id, nome, preco FROM planos WHERE id = ? AND ativo = TRUE", [planoId]),
+      pool.execute("SELECT id, nome, preco FROM planos WHERE id = ? AND ativo = TRUE AND preco > 0", [planoId]),
     ]);
     const assinatura = assinaturas[0];
     const novoPlano = planos[0];
     if (!assinatura) return res.status(409).json({ sucesso: false, erro: "Não existe assinatura ativa para alterar." });
-    if (!novoPlano) return res.status(404).json({ sucesso: false, erro: "Plano não encontrado." });
+    if (!novoPlano) return res.status(404).json({ sucesso: false, erro: "Selecione um plano pago válido. O teste gratuito está disponível apenas no primeiro registo." });
     if (Number(novoPlano.preco) >= Number(assinatura.preco)) {
       return res.status(409).json({ sucesso: false, codigo: "PAGAMENTO_NECESSARIO", erro: "Upgrade exige confirmação de pagamento." });
     }

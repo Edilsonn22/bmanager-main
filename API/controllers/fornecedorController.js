@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { validarContactosOpcionais } from "../src/utils/validacao.js";
 
 const empresaId = (req) => req.user?.empresa_id;
 const campos = (body) => [body.nome?.trim(), body.email?.trim() || null, body.contacto?.trim() || null, body.endereco?.trim() || null];
@@ -31,6 +32,8 @@ export const criarFornecedor = async (req, res) => {
   try {
     const values = campos(req.body);
     if (!values[0]) return res.status(400).json({ sucesso: false, erro: "O nome é obrigatório." });
+    const erroValidacao = validarContactosOpcionais(req.body);
+    if (erroValidacao) return res.status(400).json({ sucesso: false, erro: erroValidacao });
     const [result] = await pool.execute(
       "INSERT INTO Fornecedor (empresa_id, nome, email, contacto, endereco) VALUES (?, ?, ?, ?, ?)", [empresaId(req), ...values]
     );
@@ -44,6 +47,8 @@ export const atualizarFornecedor = async (req, res) => {
   try {
     const values = campos(req.body);
     if (!values[0]) return res.status(400).json({ sucesso: false, erro: "O nome é obrigatório." });
+    const erroValidacao = validarContactosOpcionais(req.body);
+    if (erroValidacao) return res.status(400).json({ sucesso: false, erro: erroValidacao });
     const [result] = await pool.execute(
       "UPDATE Fornecedor SET nome = ?, email = ?, contacto = ?, endereco = ? WHERE id = ? AND empresa_id = ?",
       [...values, req.params.id, empresaId(req)]

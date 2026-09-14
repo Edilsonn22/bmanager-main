@@ -45,6 +45,7 @@ export const criar = async (req, res) => {
   try {
     const plano = await obterPlanoAtivo(planoIdNumber);
     if (!plano) return res.status(404).json({ sucesso: false, erro: "Plano não encontrado." });
+    if (Number(plano.preco) <= 0) return res.status(409).json({ sucesso: false, erro: "O teste gratuito está disponível apenas no primeiro registo e não requer pagamento." });
     const reference = `BM-${req.user.empresa_id}-${Date.now()}`;
     const respostaDebito = await criarPagamento({
       amount: plano.preco,

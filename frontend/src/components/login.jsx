@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { login } from "../api/api";
 import { useAuth } from "../features/auth/AuthContext";
@@ -40,8 +40,10 @@ export default function Login() {
     <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full min-w-0 max-w-md space-y-5 rounded-2xl bg-white p-5 shadow-xl sm:p-8"
+        aria-busy={loading}
+        className="relative w-full min-w-0 max-w-md space-y-5 overflow-hidden rounded-2xl bg-white p-5 shadow-xl sm:p-8"
       >
+        {loading && <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/90 backdrop-blur-[2px]" role="status" aria-live="polite"><LoaderCircle className="animate-spin text-blue-600" size={34}/><p className="mt-3 font-semibold text-slate-800">A validar o seu acesso</p><p className="mt-1 text-sm text-slate-500">Aguarde um momento…</p></div>}
         <div>
           <Link to="/" aria-label="Voltar à página inicial" className="mb-3 inline-flex">
             <img src={vendaiLogo} alt="Vendai" className="h-10 w-auto max-w-36 object-contain" />
@@ -60,6 +62,7 @@ export default function Login() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
             required
           />
         </label>
@@ -70,8 +73,9 @@ export default function Login() {
             type={mostrarSenha ? "text" : "password"}
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
+            disabled={loading}
             required
-          /><button type="button" onClick={() => setMostrarSenha((v) => !v)} aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:bg-slate-100">{mostrarSenha ? <EyeOff size={18}/> : <Eye size={18}/>}</button></span>
+          /><button type="button" disabled={loading} onClick={() => setMostrarSenha((v) => !v)} aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-50">{mostrarSenha ? <EyeOff size={18}/> : <Eye size={18}/>}</button></span>
         </label>
         <div className="-mt-2 text-right text-sm">
           <Link to="/recuperar-senha" className="font-medium text-blue-600 hover:text-blue-700">
@@ -82,7 +86,7 @@ export default function Login() {
           className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
           disabled={loading}
         >
-          {loading ? "A entrar..." : "Entrar"}
+          {loading ? <span className="inline-flex items-center justify-center gap-2"><LoaderCircle className="animate-spin" size={18}/>A entrar…</span> : "Entrar"}
         </button>
         <p className="text-center text-sm text-slate-600">
           Ainda não tem conta?{" "}

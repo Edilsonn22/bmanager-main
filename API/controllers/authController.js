@@ -4,6 +4,7 @@ import { gerarToken } from "../src/utils/jwt.js";
 import { limiteFoiAtingido } from "../services/assinaturaService.js";
 import crypto from "crypto";
 import { enviarBoasVindas, enviarRecuperacaoSenha } from "../services/emailService.js";
+import { emailValido, noveDigitos, validarContactosOpcionais } from "../src/utils/validacao.js";
 
 const usuarioPublico = (usuario) => ({
   id: usuario.id,
@@ -21,10 +22,8 @@ export const register = async (req, res) => {
     if (!nome?.trim() || !email?.trim() || !senha || !empresaNome?.trim() || !empresaTelefone?.trim()) {
       return res.status(400).json({ message: "Preencha todos os campos." });
     }
-    const digitosTelefone = empresaTelefone.replace(/\D/g, "");
-    if (digitosTelefone.length < 8 || digitosTelefone.length > 15) {
-      return res.status(400).json({ message: "Informe um contacto válido para a empresa." });
-    }
+    if (!emailValido(email)) return res.status(400).json({ message: "Informe um endereço de e-mail válido." });
+    if (!noveDigitos(empresaTelefone)) return res.status(400).json({ message: "O contacto da empresa deve ter exatamente 9 dígitos." });
     if (senha.length < 6) {
       return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
     }
@@ -198,6 +197,7 @@ export const obterMinhaConta = async (req, res) => {
 export const atualizarMeuPerfil = async (req, res) => {
   const { nome, email } = req.body ?? {};
   if (!nome?.trim() || !email?.trim()) return res.status(400).json({ message: "Nome e e-mail são obrigatórios." });
+  if (!emailValido(email)) return res.status(400).json({ message: "Informe um endereço de e-mail válido." });
   try {
     const emailNormalizado = email.trim().toLowerCase();
     const [existentes] = await pool.execute("SELECT id FROM Usuario WHERE email = ? AND id <> ?", [emailNormalizado, req.user.id]);
@@ -226,6 +226,8 @@ export const alterarMinhaSenha = async (req, res) => {
 
 export const atualizarMinhaEmpresa = async (req, res) => {
   const { nome, nuit, email, telefone, endereco } = req.body ?? {};
+  const erroValidacao = validarContactosOpcionais({ nuit, email, telefone });
+  if (erroValidacao) return res.status(400).json({ message: erroValidacao });
   if (!nome?.trim()) return res.status(400).json({ message: "O nome da empresa é obrigatório." });
   try {
     await pool.execute(
@@ -257,6 +259,7 @@ export const criarUsuarioDaEmpresa = async (req, res) => {
     if (!nome?.trim() || !email?.trim() || !senha) {
       return res.status(400).json({ message: "Nome, e-mail e senha são obrigatórios." });
     }
+    if (!emailValido(email)) return res.status(400).json({ message: "Informe um endereço de e-mail válido." });
     if (senha.length < 6) return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
     if (!['gestor', 'operador'].includes(role)) return res.status(400).json({ message: "Papel inválido." });
 

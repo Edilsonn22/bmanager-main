@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Barcode, PackagePlus, Smartphone, X } from "lucide-react";
+import { Barcode, CheckCircle2, LoaderCircle, PackagePlus, Smartphone, Tags, Truck, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
 import { API_URL } from "../api/authenticatedFetch";
@@ -269,7 +269,15 @@ export default function AdicionarProduto() {
             <X size={20} />
           </button>
         </header>
-        <form
+        {carregando ? <div className="grid min-h-72 place-items-center p-8 text-center" role="status"><div><LoaderCircle className="mx-auto animate-spin text-indigo-600" size={34}/><p className="mt-3 font-semibold text-slate-800">A preparar o formulário</p><p className="mt-1 text-sm text-slate-500">A verificar categorias e fornecedores…</p></div></div> : (!categorias.length || !fornecedores.length) ? <div className="p-5 sm:p-8">
+          <div className="mx-auto max-w-xl text-center"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-indigo-50 text-indigo-600"><PackagePlus size={27}/></span><h2 className="mt-4 text-xl font-bold text-slate-900">Prepare os dados do primeiro produto</h2><p className="mt-2 text-sm leading-6 text-slate-600">Um produto precisa de uma categoria e de um fornecedor. Conclua os passos abaixo para continuar.</p></div>
+          <div className="mx-auto mt-6 max-w-xl space-y-3">
+            <div className={`flex items-center gap-4 rounded-2xl border p-4 ${categorias.length ? "border-emerald-200 bg-emerald-50" : "border-indigo-200 bg-white"}`}><span className={`grid size-10 shrink-0 place-items-center rounded-xl ${categorias.length ? "bg-emerald-100 text-emerald-700" : "bg-indigo-50 text-indigo-600"}`}>{categorias.length ? <CheckCircle2 size={20}/> : <Tags size={20}/>}</span><div className="min-w-0 flex-1"><p className="font-semibold text-slate-900">1. Categoria</p><p className="text-sm text-slate-500">{categorias.length ? `${categorias.length} categoria(s) disponível(eis).` : "Crie uma categoria para organizar o produto."}</p></div>{!categorias.length && <button type="button" onClick={() => navigate("/adicionarCategoria", { state: { returnTo: "/adicionarProduto" } })} className="shrink-0 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Criar</button>}</div>
+            <div className={`flex items-center gap-4 rounded-2xl border p-4 ${fornecedores.length ? "border-emerald-200 bg-emerald-50" : "border-indigo-200 bg-white"}`}><span className={`grid size-10 shrink-0 place-items-center rounded-xl ${fornecedores.length ? "bg-emerald-100 text-emerald-700" : "bg-indigo-50 text-indigo-600"}`}>{fornecedores.length ? <CheckCircle2 size={20}/> : <Truck size={20}/>}</span><div className="min-w-0 flex-1"><p className="font-semibold text-slate-900">2. Fornecedor</p><p className="text-sm text-slate-500">{fornecedores.length ? `${fornecedores.length} fornecedor(es) disponível(eis).` : "Registe quem fornece este produto."}</p></div>{!fornecedores.length && <button type="button" onClick={() => navigate("/adicionarFornecedor", { state: { returnTo: "/adicionarProduto" } })} className="shrink-0 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Registar</button>}</div>
+          </div>
+          {erro && <Feedback tipo="erro" className="mx-auto mt-5 max-w-xl">{erro}</Feedback>}
+          <div className="mt-6 text-center"><button type="button" onClick={() => navigate("/produtos")} className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 font-semibold text-slate-700 hover:bg-slate-50">Voltar aos produtos</button></div>
+        </div> : <form
           onSubmit={guardar}
           className="max-h-[calc(100dvh-8rem)] overflow-y-auto p-5 sm:p-6"
         >
@@ -621,7 +629,7 @@ export default function AdicionarProduto() {
                   : "Adicionar produto"}
             </button>
           </footer>
-        </form>
+        </form>}
       </section>
       {scannerCampo && (
         <div className="fixed inset-0 z-[160] grid place-items-center bg-slate-950/80 p-3 backdrop-blur-sm">

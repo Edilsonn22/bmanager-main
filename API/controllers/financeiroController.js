@@ -23,7 +23,7 @@ export const resumoFinanceiro = async (req, res) => {
       LEFT JOIN Categoria c
         ON c.id = p.idCategoria
 
-      WHERE p.empresa_id = ?
+      WHERE p.empresa_id = ? AND p.arquivado_em IS NULL
 
       ORDER BY p.nome ASC
       `,

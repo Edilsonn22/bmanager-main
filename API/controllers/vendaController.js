@@ -22,7 +22,7 @@ export async function criarVenda(req, res) {
     if (chaves.size !== normalizados.length) throw Object.assign(new Error("A mesma apresentação aparece mais de uma vez no carrinho."), { status: 400 });
     const ids = [...new Set(normalizados.map((item) => item.produtoId))];
     const placeholders = ids.map(() => "?").join(",");
-    const [produtos] = await connection.query(`SELECT id, nome, quantidade, preco, precoFornecedor, unidade_base FROM Produto WHERE empresa_id = ? AND id IN (${placeholders}) FOR UPDATE`, [empresaId, ...ids]);
+    const [produtos] = await connection.query(`SELECT id, nome, quantidade, preco, precoFornecedor, unidade_base FROM Produto WHERE empresa_id = ? AND arquivado_em IS NULL AND id IN (${placeholders}) FOR UPDATE`, [empresaId, ...ids]);
     if (produtos.length !== ids.length) throw Object.assign(new Error("Um dos produtos não existe."), { status: 404 });
     const [apresentacoes] = await connection.query(`SELECT pa.* FROM ProdutoApresentacao pa INNER JOIN Produto p ON p.id=pa.produto_id WHERE p.empresa_id=? AND pa.produto_id IN (${placeholders}) AND pa.ativa=TRUE AND pa.vendavel=TRUE`, [empresaId, ...ids]);
     const detalhes = normalizados.map((item) => {

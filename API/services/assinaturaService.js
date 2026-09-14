@@ -16,6 +16,7 @@ export const limiteFoiAtingido = async (empresaId, recurso) => {
   const limites = await obterLimitesDoPlanoAtivo(empresaId);
   if (!limites) return { semAssinatura: true };
 
-  const [contagem] = await pool.query(`SELECT COUNT(*) AS total FROM ${tabela} WHERE empresa_id = ?`, [empresaId]);
+  const filtroAtivos = recurso === "produtos" ? " AND arquivado_em IS NULL" : "";
+  const [contagem] = await pool.query(`SELECT COUNT(*) AS total FROM ${tabela} WHERE empresa_id = ?${filtroAtivos}`, [empresaId]);
   return { atingido: contagem[0].total >= limites[campoLimite], limite: limites[campoLimite], total: contagem[0].total };
 };

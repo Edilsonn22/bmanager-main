@@ -94,7 +94,11 @@ export const createProduto = async (req, res) => {
 export const getAllProdutos = async (req, res) => {
   try {
     const empresaId = empresaDoPedido(req);
-    const [produtos] = await pool.query("SELECT * FROM Produto WHERE empresa_id=?", [empresaId]);
+    const arquivados = req.query.estado === "arquivados";
+    const [produtos] = await pool.query(
+      `SELECT * FROM Produto WHERE empresa_id=? AND arquivado_em IS ${arquivados ? "NOT NULL" : "NULL"} ORDER BY nome ASC`,
+      [empresaId],
+    );
     return res.json({ sucesso: true, produtos: await carregarApresentacoes(produtos, empresaId) });
   } catch (error) { return res.status(500).json({ sucesso: false, erro: error.message }); }
 };
@@ -118,7 +122,7 @@ export const updateProduto = async (req, res) => {
     await connection.beginTransaction();
     const [result] = await connection.execute(
       `UPDATE Produto SET nome=?,idCategoria=?,precoFornecedor=?,preco=?,idFornecedor=?,quantidade=?,codigo_barras=?,tipo_produto=?,unidade_base=?
-       WHERE id=? AND empresa_id=?`,
+       WHERE id=? AND empresa_id=? AND arquivado_em IS NULL`,
       [produto.nome, produto.idCategoria, produto.precoFornecedor, produto.preco, produto.idFornecedor,
         produto.quantidade, produto.codigoBarras, produto.tipoProduto, produto.unidadeBase, req.params.id, empresaId],
     );
@@ -135,9 +139,21 @@ export const updateProduto = async (req, res) => {
 
 export const deleteProduto = async (req, res) => {
   try {
-    const [result] = await pool.execute("DELETE FROM Produto WHERE id=? AND empresa_id=?", [req.params.id, empresaDoPedido(req)]);
+    const [result] = await pool.execute("UPDATE Produto SET arquivado_em=NOW() WHERE id=? AND empresa_id=? AND arquivado_em IS NULL", [req.params.id, empresaDoPedido(req)]);
     if (!result.affectedRows) return res.status(404).json({ sucesso: false, erro: "Produto não encontrado." });
-    await auditar({ empresaId: empresaDoPedido(req), usuarioId: req.user.id, acao: "eliminar", entidade: "produto", entidadeId: req.params.id });
-    return res.json({ sucesso: true, mensagem: "Produto removido com sucesso." });
+    await auditar({ empresaId: empresaDoPedido(req), usuarioId: req.user.id, acao: "arquivar", entidade: "produto", entidadeId: req.params.id });
+    return res.json({ sucesso: true, mensagem: "Produto arquivado. O histórico foi preservado." });
+  } catch (error) { return res.status(500).json({ sucesso: false, erro: error.message }); }
+};
+
+export const restoreProduto = async (req, res) => {
+  try {
+    const empresaId = empresaDoPedido(req);
+    const limite = await limiteFoiAtingido(empresaId, "produtos");
+    if (limite.atingido) return res.status(403).json({ sucesso: false, erro: `O limite de ${limite.limite} produtos ativos do seu plano foi atingido.`, codigo: "LIMITE_PRODUTOS" });
+    const [result] = await pool.execute("UPDATE Produto SET arquivado_em=NULL WHERE id=? AND empresa_id=? AND arquivado_em IS NOT NULL", [req.params.id, empresaId]);
+    if (!result.affectedRows) return res.status(404).json({ sucesso: false, erro: "Produto arquivado não encontrado." });
+    await auditar({ empresaId, usuarioId: req.user.id, acao: "restaurar", entidade: "produto", entidadeId: req.params.id });
+    return res.json({ sucesso: true, mensagem: "Produto restaurado e disponível para utilização." });
   } catch (error) { return res.status(500).json({ sucesso: false, erro: error.message }); }
 };

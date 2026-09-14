@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { AlertCircle, LoaderCircle, PackagePlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "../api/authenticatedFetch";
+import { useAuth } from "../features/auth/AuthContext";
 import { Feedback } from "./ui/Feedback";
 
 function RegistarMovimento() {
   const navigate = useNavigate();
+  const { usuario } = useAuth();
 
   const [produtos, setProdutos] = useState([]);
   const [produtoSelecionado, setProdutoSelecionado] = useState("");
@@ -25,7 +28,7 @@ function RegistarMovimento() {
       .then((res) => res.json())
       .then((data) => {
         if (data.sucesso) {
-          setProdutos(data.produtos);
+          setProdutos(data.produtos || []);
         } else {
           throw new Error(data.erro || "Não foi possível carregar os produtos.");
         }
@@ -108,7 +111,7 @@ function RegistarMovimento() {
           </button>
         </div>
 
-        <form className="p-6" onSubmit={handleSubmit}>
+        {loading ? <div className="grid min-h-64 place-items-center p-8 text-center" role="status"><div><LoaderCircle className="mx-auto animate-spin text-indigo-600" size={32}/><p className="mt-3 font-semibold text-slate-800">A carregar produtos</p></div></div> : erro && !produtos.length ? <div className="p-6 text-center sm:p-10"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-red-50 text-red-600"><AlertCircle size={27}/></span><h3 className="mt-4 text-lg font-bold text-slate-900">Não foi possível carregar os produtos</h3><p className="mt-2 text-sm text-slate-600">{erro}</p><button type="button" onClick={() => navigate(-1)} className="mt-6 rounded-xl border border-slate-300 bg-white px-5 py-2.5 font-semibold text-slate-700 hover:bg-slate-50">Voltar</button></div> : !produtos.length ? <div className="p-6 text-center sm:p-10"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-indigo-50 text-indigo-600"><PackagePlus size={27}/></span><h3 className="mt-4 text-lg font-bold text-slate-900">Ainda não existem produtos</h3><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600">Para registar uma entrada ou saída de stock, primeiro é necessário adicionar um produto à empresa.</p>{usuario?.role === "operador" ? <p className="mt-5 rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-800">Peça ao administrador ou gestor da empresa para registar o primeiro produto.</p> : <button type="button" onClick={() => navigate("/adicionarProduto")} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 font-semibold text-white hover:bg-indigo-700"><PackagePlus size={18}/>Registar primeiro produto</button>}</div> : <form className="p-6" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4">
             {/* Produto */}
             <div>
@@ -176,7 +179,7 @@ function RegistarMovimento() {
               Cancelar
             </button>
           </div>
-        </form>
+        </form>}
       </div>
     </div>
   );

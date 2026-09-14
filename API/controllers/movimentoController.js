@@ -96,6 +96,7 @@ export const createMovimento = async (req, res) => {
       FROM Produto
       WHERE id = ?
       AND empresa_id = ?
+      AND arquivado_em IS NULL
       FOR UPDATE
       `,
       [

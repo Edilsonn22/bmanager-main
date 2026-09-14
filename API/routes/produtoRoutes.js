@@ -5,7 +5,8 @@ import {
   getAllProdutos,
   getProdutoById,
   updateProduto,
-  deleteProduto
+  deleteProduto,
+  restoreProduto
 } from "../controllers/produtoController.js";
 
 import { auth } from "../middlewares/auth.js";
@@ -47,6 +48,12 @@ router.put(
   "/:id",
   authorize("admin", "gestor"),
   updateProduto
+);
+
+router.patch(
+  "/:id/restaurar",
+  authorize("admin"),
+  restoreProduto
 );
 
 

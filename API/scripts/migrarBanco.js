@@ -77,7 +77,7 @@ const validarBaseline = async () => {
     ["Empresa", "bloqueada"], ["Empresa", "nuit"], ["Empresa", "email"],
     ["Empresa", "telefone"], ["Empresa", "endereco"], ["Empresa", "session_version"],
     ["Usuario", "token_version"], ["Produto", "estoque_minimo"], ["Produto", "codigo_barras"],
-    ["Produto", "tipo_produto"], ["Produto", "unidade_base"],
+    ["Produto", "tipo_produto"], ["Produto", "unidade_base"], ["Produto", "arquivado_em"],
     ["Movimentos", "preco_unitario"], ["Movimentos", "custo_unitario"],
     ["Movimentos", "origem"], ["Movimentos", "motivo"], ["Movimentos", "venda_id"],
     ["Venda", "cliente_nome"], ["VendaItem", "apresentacao_nome"],

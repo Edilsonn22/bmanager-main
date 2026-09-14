@@ -6,6 +6,7 @@ import {
   CircleX,
   CreditCard,
   History,
+  LoaderCircle,
   Minus,
   PackageSearch,
   Plus,
@@ -633,9 +634,9 @@ export default function NovaVenda() {
                   enviando || (forma === "dinheiro" && Number(recebido) < total)
                 }
                 onClick={concluir}
-                className="w-full rounded-xl bg-indigo-600 p-3 font-bold text-white shadow-md shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg disabled:translate-y-0 disabled:opacity-50 sm:min-w-52"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 p-3 font-bold text-white shadow-md shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg disabled:translate-y-0 disabled:opacity-50 sm:min-w-52"
               >
-                {enviando ? "A concluir..." : "Concluir venda"}
+                {enviando ? <><LoaderCircle size={18} className="animate-spin" aria-hidden="true"/>A concluir…</> : "Concluir venda"}
               </button>
             </div>
           </div>

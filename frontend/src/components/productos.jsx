@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { PackagePlus, Edit2, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Edit2, PackagePlus } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { API_URL } from "../api/authenticatedFetch";
 import { ConfirmDialog, Feedback } from "./ui/Feedback";
@@ -21,6 +21,7 @@ function Productos() {
   const [sucesso, setSucesso] = useState("");
   const [produtoExcluir, setProdutoExcluir] = useState(null);
   const [removendo, setRemovendo] = useState(false);
+  const [mostrarArquivados, setMostrarArquivados] = useState(false);
 
 
 
@@ -30,19 +31,19 @@ function Productos() {
       maximumFractionDigits: 2,
     })} MZN`;
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     setLoading(true); setErro("");
     try {
-      const respostas = await Promise.all([fetch(`${API_URL}/produtos`), fetch(`${API_URL}/categorias`), fetch(`${API_URL}/fornecedores`)]);
+      const respostas = await Promise.all([fetch(`${API_URL}/produtos${mostrarArquivados ? "?estado=arquivados" : ""}`), fetch(`${API_URL}/categorias`), fetch(`${API_URL}/fornecedores`)]);
       const dados = await Promise.all(respostas.map((res) => res.json().then((body) => ({ res, body }))));
       const falha = dados.find(({ res, body }) => !res.ok || body.sucesso === false);
       if (falha) throw new Error(falha.body.erro || "Não foi possível carregar os dados.");
       setProdutos(dados[0].body.produtos || []); setCategorias(dados[1].body.categorias || []); setFornecedores(dados[2].body.fornecedores || []);
     } catch (error) { setErro(error.message || "Não foi possível carregar os produtos."); }
     finally { setLoading(false); }
-  };
+  }, [mostrarArquivados]);
 
-  useEffect(() => { carregarDados(); }, []);
+  useEffect(() => { carregarDados(); }, [carregarDados]);
 
   const handleDelete = async () => {
     if (!produtoExcluir) return;
@@ -55,7 +56,7 @@ function Productos() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.erro || "Não foi possível excluir o produto.");
       setProdutos((atuais) => atuais.filter((p) => Number(p.id) !== Number(produtoExcluir.id)));
-      setSucesso("Produto excluído com sucesso."); setProdutoExcluir(null);
+      setSucesso("Produto arquivado. O histórico de vendas e movimentos foi preservado."); setProdutoExcluir(null);
     } catch (error) { setErro(error.message); }
     finally { setRemovendo(false); }
   };
@@ -68,6 +69,18 @@ function Productos() {
     else return { text: "Bom", class: "bg-green-100 text-green-700" };
   };
 
+  const restaurarProduto = async (produto) => {
+    setRemovendo(true); setErro(""); setSucesso("");
+    try {
+      const response = await fetch(`${API_URL}/produtos/${produto.id}/restaurar`, { method: "PATCH" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.erro || "Não foi possível restaurar o produto.");
+      setProdutos((atuais) => atuais.filter((p) => Number(p.id) !== Number(produto.id)));
+      setSucesso("Produto restaurado e novamente disponível para vendas e movimentos.");
+    } catch (error) { setErro(error.message); }
+    finally { setRemovendo(false); }
+  };
+
   const formatarStock = (produto) => {
     const embalagem = produto.apresentacoes?.[0];
     if (!embalagem) return `${produto.quantidade} ${produto.unidade_base || "Unidade"}(s)`;
@@ -78,15 +91,19 @@ function Productos() {
   };
 
   const produtosFiltrados = produtos.filter((p) => {
-    const correspondeNome = p.nome
-      .toLowerCase()
-      .includes(pesquisa.toLowerCase());
+    const termo = pesquisa.trim().toLocaleLowerCase("pt-MZ");
+    const correspondePesquisa = !termo
+      || p.nome.toLocaleLowerCase("pt-MZ").includes(termo)
+      || String(p.codigo_barras || "").toLocaleLowerCase("pt-MZ").includes(termo)
+      || (p.apresentacoes || []).some((apresentacao) =>
+        String(apresentacao.codigo_barras || "").toLocaleLowerCase("pt-MZ").includes(termo),
+      );
 
     const correspondeCategoria =
       categoriaSelecionada === "" ||
       Number(p.idCategoria) === Number(categoriaSelecionada);
 
-    return correspondeNome && correspondeCategoria;
+    return correspondePesquisa && correspondeCategoria;
   });
 
   return (
@@ -106,13 +123,18 @@ function Productos() {
       <Feedback tipo="erro" className="mb-4" onClose={() => setErro("")}>{erro}</Feedback>
       <Feedback tipo="sucesso" className="mb-4" onClose={() => setSucesso("")}>{sucesso}</Feedback>
 
+      <div className="mb-5 inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm" role="group" aria-label="Estado dos produtos">
+        <button type="button" onClick={() => setMostrarArquivados(false)} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${!mostrarArquivados ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Produtos ativos</button>
+        <button type="button" onClick={() => setMostrarArquivados(true)} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${mostrarArquivados ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Arquivados</button>
+      </div>
+
       {/* Pesquisa */}
       <div className="mb-5 flex flex-col gap-3 md:flex-row">
         {/* Pesquisa por nome */}
         <div className="relative flex-1">
           <input
             type="text"
-            placeholder="Pesquisar produto..."
+            placeholder="Pesquisar por nome ou código de barras..."
             value={pesquisa}
             onChange={(e) => setPesquisa(e.target.value)}
             className="
@@ -166,11 +188,11 @@ function Productos() {
       {/* Tabela */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[980px] table-auto">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
-                  Nome
+                <th className="min-w-56 px-6 py-3 text-left text-xs uppercase tracking-wider">
+                  Produto
                 </th>
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
                   Categoria
@@ -211,14 +233,17 @@ function Productos() {
                 );
 
                 return (
-                  <tr key={produto.id}>
-                    <td className="px- py-3">{produto.nome}</td>
+                  <tr key={produto.id} className="transition-colors hover:bg-slate-50/70">
+                    <td className="min-w-56 max-w-80 px-6 py-4 text-left">
+                      <strong className="block break-words text-sm font-semibold leading-5 text-slate-900" title={produto.nome}>{produto.nome}</strong>
+                      <small className="mt-0.5 block text-slate-400">Código #{produto.id}</small>
+                    </td>
 
                     <td className="px-6 py-3">
                       {categoria ? categoria.nome : "Sem categoria"}
                     </td>
 
-                    <td className="px- py-3">
+                    <td className="px-6 py-3">
                       {fornecedor ? fornecedor.nome : "Sem fornecedor"}
                     </td>
 
@@ -242,7 +267,7 @@ function Productos() {
                     <td className="px-6 py-3 whitespace-nowrap"><strong className="font-semibold text-slate-900">{formatarMzn(produto.preco)}</strong><small className="block text-slate-500">por {produto.unidade_base || "unidade"}</small>{Boolean(produto.apresentacoes?.[0]?.vendavel) && <small className="mt-1 block font-semibold text-indigo-600">{formatarMzn(produto.apresentacoes[0].preco)} por {produto.apresentacoes[0].nome}</small>}</td>
 
                     <td className="px-6 py-3 text-center flex justify-center">
-                      {podeGerir && (
+                      {podeGerir && !mostrarArquivados && (
                         <Link to={`/editarProduto/${produto.id}`}>
                           <button type="button" aria-label={`Editar ${produto.nome}`} className="p-2 hover:bg-gray-100 rounded-lg transition">
                             <Edit2 className="w-4 h-4 text-gray-600" />
@@ -250,16 +275,17 @@ function Productos() {
                         </Link>
                       )}
 
-                      {podeExcluir && (
+                      {podeExcluir && !mostrarArquivados && (
                         <button
                           type="button"
-                          aria-label={`Excluir ${produto.nome}`}
+                          aria-label={`Arquivar ${produto.nome}`}
                           onClick={() => setProdutoExcluir(produto)}
-                          className="p-2 hover:bg-red-50 rounded-lg transition"
+                          className="rounded-lg p-2 transition hover:bg-amber-50"
                         >
-                          <Trash2 className="w-4 h-4 text-red-600" />
+                          <Archive className="h-4 w-4 text-amber-700" />
                         </button>
                       )}
+                      {podeExcluir && mostrarArquivados && <button type="button" disabled={removendo} aria-label={`Restaurar ${produto.nome}`} onClick={() => restaurarProduto(produto)} className="rounded-lg p-2 text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"><ArchiveRestore className="h-4 w-4"/></button>}
                     </td>
                   </tr>
                 );
@@ -269,11 +295,11 @@ function Productos() {
 
           {loading && <p className="py-8 text-center text-gray-500" role="status">A carregar produtos...</p>}
           {!loading && !erro && produtosFiltrados.length === 0 && (
-            <div className="px-4 py-10 text-center"><PackagePlus className="mx-auto h-10 w-10 text-slate-300"/><p className="mt-3 font-semibold text-slate-700">{pesquisa || categoriaSelecionada ? "Nenhum produto corresponde aos filtros." : "Ainda não existem produtos."}</p>{podeGerir && !pesquisa && !categoriaSelecionada && <Link to="/adicionarProduto" className="mt-3 inline-flex font-semibold text-indigo-600 hover:underline">Adicionar o primeiro produto</Link>}</div>
+            <div className="px-4 py-10 text-center">{mostrarArquivados ? <Archive className="mx-auto h-10 w-10 text-slate-300"/> : <PackagePlus className="mx-auto h-10 w-10 text-slate-300"/>}<p className="mt-3 font-semibold text-slate-700">{pesquisa || categoriaSelecionada ? "Nenhum produto corresponde aos filtros." : mostrarArquivados ? "Não existem produtos arquivados." : "Ainda não existem produtos."}</p>{podeGerir && !mostrarArquivados && !pesquisa && !categoriaSelecionada && <Link to="/adicionarProduto" className="mt-3 inline-flex font-semibold text-indigo-600 hover:underline">Adicionar o primeiro produto</Link>}</div>
           )}
         </div>
       </div>
-      <ConfirmDialog aberto={Boolean(produtoExcluir)} titulo="Excluir produto?" descricao={`O produto “${produtoExcluir?.nome || ""}” será removido. Esta ação não pode ser desfeita.`} ocupada={removendo} onCancelar={() => !removendo && setProdutoExcluir(null)} onConfirmar={handleDelete}/>
+      <ConfirmDialog aberto={Boolean(produtoExcluir)} titulo="Arquivar produto?" descricao={`“${produtoExcluir?.nome || ""}” deixará de aparecer em vendas, stock atual e alertas. O histórico será preservado e poderá restaurar o produto depois.`} confirmarLabel="Arquivar produto" ocupada={removendo} onCancelar={() => !removendo && setProdutoExcluir(null)} onConfirmar={handleDelete}/>
     </main>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, BarChart3, Check, Package, PackagePlus, ReceiptText, Tags, Truck, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
-import vendaiLogo from "../assets/vendai-logo.png";
+import vendaiLogo from "../assets/vendai-logo-dark.png";
 
 const passosGestao = [
   { icon: BarChart3, titulo: "Conheça o seu painel", texto: "Aqui encontra vendas, valor do stock e alertas importantes da operação.", detalhe: "Use estes indicadores para perceber rapidamente o que precisa da sua atenção.", destino: "/painel", acao: "Abrir painel" },
@@ -60,7 +60,7 @@ export default function Onboarding() {
   return <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/55 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
     <div ref={dialogRef} tabIndex={-1} className="relative grid max-h-[92dvh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl outline-none md:grid-cols-[220px_minmax(0,1fr)]">
       <aside className="hidden bg-slate-950 p-6 text-white md:flex md:flex-col">
-        <img src={vendaiLogo} alt="Vendai" className="h-8 w-auto max-w-28 rounded bg-white object-contain px-2" />
+        <img src={vendaiLogo} alt="Vendai" className="h-8 w-auto max-w-28 object-contain" />
         <p className="mt-8 text-xs font-semibold uppercase tracking-wider text-slate-400">Configuração inicial</p>
         <ol className="mt-4 space-y-2">{passos.map((item, indice) => {
           const Icone = item.icon; const ativo = indice === passo; const concluido = indice < passo;
@@ -78,7 +78,7 @@ export default function Onboarding() {
         </div>
         <footer className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <button type="button" onClick={() => concluir()} className="px-3 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800">Ignorar guia</button>
-          <div className="flex gap-2">{passo > 0 && <button type="button" onClick={() => setPasso((valor) => valor - 1)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:flex-none"><ArrowLeft size={17}/>Voltar</button>}{ultimo ? <button type="button" onClick={() => concluir(atual.destino)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 sm:flex-none"><Check size={17}/>{atual.acao}</button> : <button type="button" onClick={() => setPasso((valor) => valor + 1)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 sm:flex-none">Continuar<ArrowRight size={17}/></button>}</div>
+          <div className="flex gap-2">{passo > 0 && <button type="button" onClick={() => setPasso((valor) => valor - 1)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:flex-none"><ArrowLeft size={17}/>Voltar</button>}{ultimo ? <button type="button" onClick={() => concluir("/painel")} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 sm:flex-none"><Check size={17}/>Concluir e ir ao painel</button> : <button type="button" onClick={() => setPasso((valor) => valor + 1)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 sm:flex-none">Continuar<ArrowRight size={17}/></button>}</div>
         </footer>
       </section>
     </div>
