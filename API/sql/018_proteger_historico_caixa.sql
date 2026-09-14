@@ -24,7 +24,7 @@ SET @fk_caixa_empresa_restrict_existe = (
 );
 SET @sql_criar_fk_caixa = IF(
   @fk_caixa_empresa_restrict_existe = 0,
-  'ALTER TABLE CaixaSessao ADD CONSTRAINT fk_caixa_empresa_restrict FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE RESTRICT ON UPDATE CASCADE',
+  'ALTER TABLE CaixaSessao ADD CONSTRAINT fk_caixa_empresa_restrict FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE RESTRICT',
   'SELECT 1'
 );
 PREPARE stmt_criar_fk_caixa FROM @sql_criar_fk_caixa;
