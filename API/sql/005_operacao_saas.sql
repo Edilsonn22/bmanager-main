@@ -28,5 +28,5 @@ CREATE TABLE IF NOT EXISTS auditoria (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO planos (nome, descricao, preco, tipo, limite_usuarios, limite_produtos)
-SELECT 'Teste gratuito', 'Experimente os recursos do Business durante 14 dias.', 0, 'mensal', 5, 1000000
+SELECT 'Teste gratuito', 'Acesso experimental por 14 dias.', 0, 'mensal', 2, 50
 WHERE NOT EXISTS (SELECT 1 FROM planos WHERE nome = 'Teste gratuito');
