@@ -27,6 +27,20 @@ const nomes = (await readdir(pastaSql))
 
 const calcularChecksum = (conteudo) => crypto.createHash("sha256").update(conteudo).digest("hex");
 
+// Estas duas migrações foram publicadas em duas versões antes da adoção da
+// regra de imutabilidade. Os hashes ficam explícitos para reconhecer somente
+// essas versões históricas já aplicadas, sem aceitar alterações arbitrárias.
+const checksumsHistoricos = {
+  "005_operacao_saas.sql": [
+    "bb760fac9368ff1319d9a8c6c5f78257ce0b05d831d5601969d16937b687d7bd",
+    "6b59d8368320cd593faaa2fc2fb68505a59ce3e821a3d44adc37e7a28b37393a",
+  ],
+  "011_vendas_clientes_caixa.sql": [
+    "15534d13e270d8af32325745853989a61e89e95431b31ed19652c614bddee372",
+    "e540b8581cd5453d360939af8a990a99f24aa4826b83ad8fc1b2981fd23b9cf6",
+  ],
+};
+
 const migrations = await Promise.all(nomes.map(async (nome) => {
   const sql = await readFile(path.join(pastaSql, nome), "utf8");
   const sqlNormalizado = sql.replace(/\r\n?/g, "\n");
@@ -34,6 +48,7 @@ const migrations = await Promise.all(nomes.map(async (nome) => {
     calcularChecksum(sql),
     calcularChecksum(sqlNormalizado),
     calcularChecksum(sqlNormalizado.replace(/\n/g, "\r\n")),
+    ...(checksumsHistoricos[nome] || []),
   ]);
   return {
     nome,
