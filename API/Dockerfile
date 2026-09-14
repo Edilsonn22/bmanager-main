@@ -10,4 +10,4 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 USER node
 EXPOSE 3000
-CMD ["sh", "-c", "npm run migrate && exec node server.js"]
+CMD ["node", "server.js"]
