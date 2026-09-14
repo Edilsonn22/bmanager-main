@@ -25,12 +25,22 @@ const nomes = (await readdir(pastaSql))
   .filter((nome) => /^\d+_[\w-]+\.sql$/i.test(nome))
   .sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
 
+const calcularChecksum = (conteudo) => crypto.createHash("sha256").update(conteudo).digest("hex");
+
 const migrations = await Promise.all(nomes.map(async (nome) => {
   const sql = await readFile(path.join(pastaSql, nome), "utf8");
+  const sqlNormalizado = sql.replace(/\r\n?/g, "\n");
+  const checksumsAceitos = new Set([
+    calcularChecksum(sql),
+    calcularChecksum(sqlNormalizado),
+    calcularChecksum(sqlNormalizado.replace(/\n/g, "\r\n")),
+  ]);
   return {
     nome,
     sql,
-    checksum: crypto.createHash("sha256").update(sql).digest("hex"),
+    // Novos registos usam LF como formato canónico, independentemente do SO.
+    checksum: calcularChecksum(sqlNormalizado),
+    checksumsAceitos,
   };
 }));
 
@@ -116,7 +126,7 @@ try {
 
   for (const migration of migrations) {
     const aplicada = aplicadas.get(migration.nome);
-    if (aplicada && aplicada.checksum !== migration.checksum) {
+    if (aplicada && !migration.checksumsAceitos.has(aplicada.checksum)) {
       throw new Error(`A migração já aplicada foi alterada: ${migration.nome}`);
     }
   }
