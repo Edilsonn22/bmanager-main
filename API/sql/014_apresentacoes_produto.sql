@@ -26,9 +26,26 @@ ALTER TABLE VendaItem
   ADD COLUMN IF NOT EXISTS apresentacao_id INT UNSIGNED DEFAULT NULL,
   ADD COLUMN IF NOT EXISTS apresentacao_nome VARCHAR(50) NOT NULL DEFAULT 'Unidade',
   ADD COLUMN IF NOT EXISTS fator_conversao INT UNSIGNED NOT NULL DEFAULT 1,
-  ADD COLUMN IF NOT EXISTS quantidade_base INT UNSIGNED DEFAULT NULL,
-  ADD CONSTRAINT fk_venda_item_apresentacao FOREIGN KEY (apresentacao_id)
-    REFERENCES ProdutoApresentacao(id) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD COLUMN IF NOT EXISTS quantidade_base INT UNSIGNED DEFAULT NULL;
+
+-- A migração pode ter sido interrompida depois do ALTER acima, pois DDL no
+-- MySQL faz commit implícito. Cria a FK somente quando ainda não existir.
+SET @fk_venda_item_apresentacao_existe = (
+  SELECT COUNT(*)
+  FROM information_schema.TABLE_CONSTRAINTS
+  WHERE CONSTRAINT_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'VendaItem'
+    AND CONSTRAINT_NAME = 'fk_venda_item_apresentacao'
+    AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+);
+SET @sql_fk_venda_item_apresentacao = IF(
+  @fk_venda_item_apresentacao_existe = 0,
+  'ALTER TABLE VendaItem ADD CONSTRAINT fk_venda_item_apresentacao FOREIGN KEY (apresentacao_id) REFERENCES ProdutoApresentacao(id) ON DELETE SET NULL ON UPDATE CASCADE',
+  'SELECT 1'
+);
+PREPARE stmt_fk_venda_item_apresentacao FROM @sql_fk_venda_item_apresentacao;
+EXECUTE stmt_fk_venda_item_apresentacao;
+DEALLOCATE PREPARE stmt_fk_venda_item_apresentacao;
 
 UPDATE VendaItem
 SET quantidade_base = quantidade * fator_conversao
