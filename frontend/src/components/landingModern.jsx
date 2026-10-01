@@ -6,8 +6,12 @@ import {
   Banknote,
   Boxes,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Mail,
   MapPin,
+  Pause,
+  Play,
   ShoppingCart,
   UserRoundCheck,
 } from "lucide-react";
@@ -564,14 +568,45 @@ function DashboardImage() {
 
 function ProductShowcase() {
   const [ativo, setAtivo] = useState(0);
+  const [rotacaoPausada, setRotacaoPausada] = useState(false);
+  const [ponteiroSobre, setPonteiroSobre] = useState(false);
+  const [focoDentro, setFocoDentro] = useState(false);
+  const [movimentoReduzido, setMovimentoReduzido] = useState(false);
   const mudar = (indice) =>
     setAtivo((indice + demonstracoes.length) % demonstracoes.length);
+
+  useEffect(() => {
+    const preferencia = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const atualizarPreferencia = () =>
+      setMovimentoReduzido(preferencia.matches);
+    atualizarPreferencia();
+    preferencia.addEventListener("change", atualizarPreferencia);
+    return () =>
+      preferencia.removeEventListener("change", atualizarPreferencia);
+  }, []);
+
+  useEffect(() => {
+    if (rotacaoPausada || ponteiroSobre || focoDentro || movimentoReduzido)
+      return undefined;
+    const temporizador = window.setTimeout(
+      () => setAtivo((indice) => (indice + 1) % demonstracoes.length),
+      6000,
+    );
+    return () => window.clearTimeout(temporizador);
+  }, [ativo, focoDentro, movimentoReduzido, ponteiroSobre, rotacaoPausada]);
 
   return (
     <section
       id="plataforma"
       data-reveal
       className="landing-reveal relative z-10 scroll-mt-20 border-y border-slate-200 bg-[#f5f7f5] py-14 sm:py-20"
+      onMouseEnter={() => setPonteiroSobre(true)}
+      onMouseLeave={() => setPonteiroSobre(false)}
+      onFocusCapture={() => setFocoDentro(true)}
+      onBlurCapture={(evento) => {
+        if (!evento.currentTarget.contains(evento.relatedTarget))
+          setFocoDentro(false);
+      }}
     >
       <div className="mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-8">
         <div className="mb-8 max-w-2xl">
@@ -582,44 +617,80 @@ function ProductShowcase() {
             Veja o sistema em utilização.
           </h2>
         </div>
-        <div className="grid items-center gap-7 lg:grid-cols-[minmax(0,1.45fr)_minmax(250px,.55fr)] lg:gap-12">
-          <div className="border border-slate-300 bg-white p-1.5 sm:p-2">
-            <img
-              src={demonstracoes[ativo].imagem}
-              alt={`${demonstracoes[ativo].nome} do sistema Vendaí`}
-              className="aspect-[1.75/1] w-full bg-white object-contain object-top"
-              loading="lazy"
-              decoding="async"
-            />
+        <div>
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm sm:p-2">
+            <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-50">
+              {demonstracoes.map((item, indice) => (
+                <img
+                  key={item.nome}
+                  src={item.imagem}
+                  alt={indice === ativo ? `${item.nome} do sistema Vendaí` : ""}
+                  aria-hidden={indice !== ativo}
+                  className={`absolute inset-0 h-full w-full object-contain object-top transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none ${indice === ativo ? "z-10 scale-100 opacity-100" : "z-0 scale-[1.015] opacity-0"}`}
+                  loading={indice === ativo ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              ))}
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase text-blue-800">
-              {demonstracoes[ativo].nome} · {String(ativo + 1).padStart(2, "0")}
-            </p>
-            <h3 className="landing-display mt-3 text-2xl leading-tight text-slate-950 sm:text-3xl">
-              {demonstracoes[ativo].titulo}
-            </h3>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              {demonstracoes[ativo].texto}
-            </p>
-            <div
-              className="mt-6 grid grid-cols-2 border-t border-slate-300"
-              role="tablist"
-              aria-label="Módulos do Vendaí"
-            >
+          <div className="flex items-center justify-between gap-4 border-b border-slate-200 py-2.5">
+            <div className="flex items-center gap-2" role="tablist" aria-label="Demonstrações do Vendaí">
               {demonstracoes.map((item, indice) => (
                 <button
                   key={item.nome}
                   type="button"
                   role="tab"
+                  aria-label={`Mostrar ${item.nome}`}
                   aria-selected={ativo === indice}
                   onClick={() => mudar(indice)}
-                  className={`border-b border-slate-300 py-2.5 text-left text-xs font-medium transition ${ativo === indice ? "border-b-2 border-blue-800 text-blue-900" : "text-slate-600 hover:text-slate-950"}`}
-                >
-                  {item.nome}
-                </button>
+                  className={`h-2 rounded-full transition-[width,background-color] duration-300 ${ativo === indice ? "w-8 bg-blue-800" : "w-2 bg-slate-300 hover:bg-slate-500"}`}
+                />
               ))}
             </div>
+            <span className="mr-auto text-xs tabular-nums text-slate-500" aria-live="off">
+              {String(ativo + 1).padStart(2, "0")} / {String(demonstracoes.length).padStart(2, "0")}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => mudar(ativo - 1)}
+                aria-label="Demonstração anterior"
+                title="Demonstração anterior"
+                className="grid size-9 place-items-center rounded-full text-slate-500 transition-colors duration-200 hover:bg-white hover:text-blue-900"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setRotacaoPausada((pausada) => !pausada)}
+                aria-label={rotacaoPausada ? "Retomar rotação automática" : "Pausar rotação automática"}
+                aria-pressed={rotacaoPausada}
+                title={rotacaoPausada ? "Retomar rotação automática" : "Pausar rotação automática"}
+                className="grid size-9 place-items-center rounded-full text-slate-500 transition-colors duration-200 hover:bg-white hover:text-blue-900"
+              >
+                {rotacaoPausada ? <Play size={16} /> : <Pause size={16} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => mudar(ativo + 1)}
+                aria-label="Próxima demonstração"
+                title="Próxima demonstração"
+                className="grid size-9 place-items-center rounded-full text-slate-500 transition-colors duration-200 hover:bg-white hover:text-blue-900"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="mt-5 max-w-3xl">
+            <p className="text-xs font-semibold uppercase text-blue-800">
+              {demonstracoes[ativo].nome}
+            </p>
+            <h3 className="landing-display mt-2 text-2xl leading-tight text-slate-950 sm:text-3xl">
+              {demonstracoes[ativo].titulo}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+              {demonstracoes[ativo].texto}
+            </p>
           </div>
         </div>
       </div>
