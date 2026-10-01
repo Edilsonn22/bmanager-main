@@ -24,11 +24,10 @@ export default function Login() {
       const sessao = await login({ email, senha });
       iniciarSessao(sessao);
       const proprietario = sessao.usuario?.tipo_conta === "platform_owner";
-      const destinoAnterior = location.state?.from?.pathname;
-      const destinoSeguro = destinoAnterior && !destinoAnterior.startsWith("/admin/")
-        ? destinoAnterior
-        : "/painel";
-      navigate(proprietario ? "/admin/sistema" : destinoSeguro, { replace: true, state: null });
+      navigate(proprietario ? "/admin/sistema" : "/vendas/nova", {
+        replace: true,
+        state: null,
+      });
     } catch (error) {
       setErro(error.message);
     } finally {
@@ -46,10 +45,10 @@ export default function Login() {
         {loading && <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/90 backdrop-blur-[2px]" role="status" aria-live="polite"><LoaderCircle className="animate-spin text-blue-600" size={34}/><p className="mt-3 font-semibold text-slate-800">A validar o seu acesso</p><p className="mt-1 text-sm text-slate-500">Aguarde um momento…</p></div>}
         <div>
           <Link to="/" aria-label="Voltar à página inicial" className="mb-3 inline-flex">
-            <img src={vendaiLogo} alt="Vendai" className="h-10 w-auto max-w-36 object-contain" />
+            <img src={vendaiLogo} alt="Vendaí" className="h-10 w-auto max-w-36 object-contain" />
           </Link>
           <h1 className="text-2xl font-bold text-slate-900">
-            Entrar no Vendai
+            Entrar no Vendaí
           </h1>
           <p className="mt-1 text-slate-500">Aceda ao painel da sua empresa.</p>
         </div>

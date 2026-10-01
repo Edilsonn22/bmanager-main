@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { X } from "lucide-react";
 import { API_URL } from "../api/authenticatedFetch";
+import { ProductImageField } from "./ui/ProductImageField";
+import { guardarImagemProduto, removerImagemProduto } from "../utils/productImage";
 
 const formularioInicial = {
   nome: "",
@@ -23,6 +25,9 @@ export default function EditarProduto() {
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [imagem, setImagem] = useState(null);
+  const [imagemPreview, setImagemPreview] = useState("");
+  const [removerImagemExistente, setRemoverImagemExistente] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -61,6 +66,10 @@ export default function EditarProduto() {
         });
         setCategorias(categoriasData.categorias || []);
         setFornecedores(fornecedoresData.fornecedores || []);
+        if (produto.tem_imagem) {
+          const imagemResponse = await fetch(`${API_URL}/produtos/${id}/imagem`);
+          if (imagemResponse.ok && ativo) setImagemPreview(URL.createObjectURL(await imagemResponse.blob()));
+        }
       } catch (error) {
         if (ativo) setErro(error.message);
       } finally {
@@ -72,8 +81,25 @@ export default function EditarProduto() {
     return () => { ativo = false; };
   }, [id]);
 
+  useEffect(() => () => {
+    if (imagemPreview) URL.revokeObjectURL(imagemPreview);
+  }, [imagemPreview]);
+
   const mudar = (campo) => (event) => {
     setForm((atual) => ({ ...atual, [campo]: event.target.value }));
+  };
+
+  const selecionarImagem = (blob) => {
+    setImagem(blob);
+    setImagemPreview(URL.createObjectURL(blob));
+    setRemoverImagemExistente(false);
+    setErro("");
+  };
+
+  const removerImagem = () => {
+    setImagem(null);
+    setImagemPreview("");
+    setRemoverImagemExistente(true);
   };
 
   const guardar = async (event) => {
@@ -105,6 +131,8 @@ export default function EditarProduto() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.erro || "Não foi possível atualizar o produto.");
+      if (imagem) await guardarImagemProduto(id, imagem);
+      else if (removerImagemExistente) await removerImagemProduto(id);
       navigate("/produtos", { replace: true });
     } catch (error) {
       setErro(error.message);
@@ -113,19 +141,20 @@ export default function EditarProduto() {
     }
   };
 
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-2 sm:p-4">
-    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl">
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-2 sm:p-3">
+    <div className="max-h-[calc(100dvh-1.5rem)] w-[min(96vw,1536px)] overflow-y-auto rounded-xl bg-white shadow-xl">
       <div className="flex items-center justify-between border-b border-gray-200 p-4 sm:p-6">
         <div><h2 className="font-bold text-gray-900">Editar produto</h2><p className="text-sm text-gray-500">Atualize os dados do produto.</p></div>
         <button type="button" aria-label="Fechar" onClick={() => navigate("/produtos")} className="rounded-lg p-2 hover:bg-gray-100"><X className="h-5 w-5" /></button>
       </div>
 
-      <form className="space-y-5 p-4 sm:p-6" onSubmit={guardar}>
+      <form className="space-y-4 p-4 sm:p-6" onSubmit={guardar}>
         {erro && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{erro}</p>}
-        {loading ? <p className="py-6 text-center text-gray-500">A carregar produto...</p> : <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="block text-sm font-medium text-gray-700 md:col-span-2">Nome do produto *<input value={form.nome} onChange={mudar("nome")} required className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500" /></label>
-          <div className="md:col-span-2 rounded-xl bg-slate-50 p-4"><p className="mb-2 text-sm font-semibold">Tipo de produto</p><div className="flex flex-wrap gap-4"><label><input type="radio" className="mr-2" checked={form.tipo_produto === "simples"} onChange={() => setForm((f) => ({...f, tipo_produto:"simples"}))}/>Simples</label><label><input type="radio" className="mr-2" checked={form.tipo_produto === "multiplas"} onChange={() => setForm((f) => ({...f, tipo_produto:"multiplas"}))}/>Unidade e embalagem</label></div></div>
-          <label className="block text-sm font-medium text-gray-700 md:col-span-2">Código de barras<input value={form.codigo_barras} onChange={mudar("codigo_barras")} placeholder="Leia ou digite o código" className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2" /></label>
+        {loading ? <p className="py-6 text-center text-gray-500">A carregar produto...</p> : <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <label className="block text-sm font-medium text-gray-700 md:col-span-3">Nome do produto *<input value={form.nome} onChange={mudar("nome")} required className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500" /></label>
+          <ProductImageField preview={imagemPreview} onChange={selecionarImagem} onRemove={removerImagem} onError={setErro} disabled={salvando} className="md:col-span-3" />
+          <div className="md:col-span-3 rounded-xl bg-slate-50 p-4"><p className="mb-2 text-sm font-semibold">Tipo de produto</p><div className="flex flex-wrap gap-4"><label><input type="radio" className="mr-2" checked={form.tipo_produto === "simples"} onChange={() => setForm((f) => ({...f, tipo_produto:"simples"}))}/>Simples</label><label><input type="radio" className="mr-2" checked={form.tipo_produto === "multiplas"} onChange={() => setForm((f) => ({...f, tipo_produto:"multiplas"}))}/>Unidade e embalagem</label></div></div>
+          <label className="block text-sm font-medium text-gray-700 md:col-span-3">Código de barras<input value={form.codigo_barras} onChange={mudar("codigo_barras")} placeholder="Leia ou digite o código" className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2" /></label>
           <label className="block text-sm font-medium text-gray-700">Categoria *<select value={form.idCategoria} onChange={mudar("idCategoria")} required className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Selecione</option>{categorias.map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>)}</select></label>
           <label className="block text-sm font-medium text-gray-700">Fornecedor *<select value={form.idFornecedor} onChange={mudar("idFornecedor")} required className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"><option value="">Selecione</option>{fornecedores.map((fornecedor) => <option key={fornecedor.id} value={fornecedor.id}>{fornecedor.nome}</option>)}</select></label>
           {form.tipo_produto === "simples" && <label className="block text-sm font-medium text-gray-700">Custo de compra *<input type="number" min="0.01" step="0.01" value={form.precoFornecedor} onChange={mudar("precoFornecedor")} required className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500" /></label>}

@@ -21,7 +21,7 @@ export const resumoFinanceiro = async (req, res) => {
       FROM Produto p
 
       LEFT JOIN Categoria c
-        ON c.id = p.idCategoria
+        ON c.id = p.idCategoria AND c.empresa_id = p.empresa_id
 
       WHERE p.empresa_id = ? AND p.arquivado_em IS NULL
 
@@ -36,11 +36,31 @@ export const resumoFinanceiro = async (req, res) => {
         m.id,
         m.id_Produto AS produtoId,
         m.tipo,
-        CASE WHEN m.origem = 'venda'
-          THEN GREATEST(m.quantidade - COALESCE(vi.quantidade_devolvida, 0), 0)
-          ELSE m.quantidade
-        END AS quantidade,
-        m.preco_unitario,
+        m.quantidade,
+        CASE WHEN m.origem IN ('venda', 'devolucao') AND v.subtotal > 0
+          THEN m.preco_unitario * v.total / v.subtotal
+          ELSE m.preco_unitario
+        END AS preco_unitario,
+        CASE
+          WHEN m.origem = 'venda' AND v.id IS NOT NULL THEN
+            CASE WHEN v.subtotal > 0
+              THEN COALESCE(linhas.valor_vendido * v.total / v.subtotal * m.quantidade / NULLIF(quantidades.quantidade_total, 0), m.preco_unitario * m.quantidade)
+              ELSE 0
+            END
+          WHEN m.origem = 'devolucao' AND v.id IS NOT NULL THEN
+            CASE WHEN v.subtotal > 0
+              THEN COALESCE(linhas.valor_devolvido * v.total / v.subtotal * m.quantidade / NULLIF(quantidades.quantidade_total, 0), m.preco_unitario * m.quantidade)
+              ELSE 0
+            END
+          ELSE m.custo_unitario * m.quantidade
+        END AS valor_total,
+        CASE
+          WHEN m.origem = 'venda' AND v.id IS NOT NULL
+            THEN COALESCE(linhas.custo_vendido * m.quantidade / NULLIF(quantidades.quantidade_total, 0), m.custo_unitario * m.quantidade)
+          WHEN m.origem = 'devolucao' AND v.id IS NOT NULL
+            THEN COALESCE(linhas.custo_devolvido * m.quantidade / NULLIF(quantidades.quantidade_total, 0), m.custo_unitario * m.quantidade)
+          ELSE m.custo_unitario * m.quantidade
+        END AS custo_total,
         m.custo_unitario,
         m.origem,
         m.venda_id,
@@ -56,19 +76,36 @@ export const resumoFinanceiro = async (req, res) => {
       FROM Movimentos m
 
       INNER JOIN Produto p
-        ON p.id = m.id_Produto
+        ON p.id = m.id_Produto AND p.empresa_id = m.empresa_id
 
       LEFT JOIN Venda v
-        ON v.id = m.venda_id
+        ON v.id = m.venda_id AND v.empresa_id = m.empresa_id
 
-      LEFT JOIN VendaItem vi
-        ON vi.venda_id = m.venda_id AND vi.produto_id = m.id_Produto
+      LEFT JOIN (
+        SELECT venda_id,produto_id,
+          SUM(total) AS valor_vendido,
+          SUM(custo_unitario * quantidade) AS custo_vendido,
+          SUM(total * quantidade_devolvida / NULLIF(quantidade,0)) AS valor_devolvido,
+          SUM(custo_unitario * quantidade_devolvida) AS custo_devolvido
+        FROM VendaItem
+        GROUP BY venda_id,produto_id
+      ) linhas ON linhas.venda_id = m.venda_id AND linhas.produto_id = m.id_Produto
+
+      LEFT JOIN (
+        SELECT empresa_id,venda_id,id_Produto,origem,SUM(quantidade) AS quantidade_total
+        FROM Movimentos
+        WHERE venda_id IS NOT NULL AND origem IN ('venda','devolucao')
+        GROUP BY empresa_id,venda_id,id_Produto,origem
+      ) quantidades ON quantidades.empresa_id = m.empresa_id
+        AND quantidades.venda_id = m.venda_id
+        AND quantidades.id_Produto = m.id_Produto
+        AND quantidades.origem = m.origem
 
       LEFT JOIN Categoria c
-        ON c.id = p.idCategoria
+        ON c.id = p.idCategoria AND c.empresa_id = p.empresa_id
 
       WHERE m.empresa_id = ?
-      AND (m.origem IS NULL OR (m.origem = 'venda' AND v.estado <> 'cancelada'))
+      AND (m.origem IS NULL OR m.origem = 'manual' OR (m.origem IN ('venda', 'devolucao') AND v.estado <> 'cancelada'))
 
       ORDER BY m.created_at DESC
       `,

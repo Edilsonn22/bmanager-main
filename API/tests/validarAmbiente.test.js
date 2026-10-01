@@ -18,7 +18,7 @@ test("produção rejeita segredo fraco e URL sem HTTPS", () => {
     SMTP_HOST: "smtp.exemplo.com",
     SMTP_USER: "utilizador",
     SMTP_PASSWORD: "senha-smtp",
-    EMAIL_FROM: "Vendai <no-reply@exemplo.com>",
+    EMAIL_FROM: "Vendaí <no-reply@exemplo.com>",
     DEBITO_API_TOKEN: "token-seguro",
     DEBITO_MERCHANT_ID: "merchant-uuid",
     DEBITO_WALLET_CODE: "wallet-mzn",
@@ -41,7 +41,7 @@ test("produção aceita configuração essencial segura", () => {
     SMTP_HOST: "smtp.exemplo.com",
     SMTP_USER: "utilizador",
     SMTP_PASSWORD: "senha-smtp",
-    EMAIL_FROM: "Vendai <no-reply@exemplo.com>",
+    EMAIL_FROM: "Vendaí <no-reply@exemplo.com>",
     DEBITO_API_TOKEN: "token-seguro",
     DEBITO_MERCHANT_ID: "merchant-uuid",
     DEBITO_WALLET_CODE: "wallet-mzn",
@@ -62,6 +62,6 @@ test("produção exige configuração completa do gateway", () => {
     SMTP_HOST: "smtp.exemplo.com",
     SMTP_USER: "utilizador",
     SMTP_PASSWORD: "senha-smtp",
-    EMAIL_FROM: "Vendai <no-reply@exemplo.com>",
+    EMAIL_FROM: "Vendaí <no-reply@exemplo.com>",
   }), /DEBITO/);
 });

@@ -6,7 +6,10 @@ import {
   getProdutoById,
   updateProduto,
   deleteProduto,
-  restoreProduto
+  restoreProduto,
+  getImagemProduto,
+  updateImagemProduto,
+  deleteImagemProduto
 } from "../controllers/produtoController.js";
 
 import { auth } from "../middlewares/auth.js";
@@ -41,6 +44,15 @@ router.get(
   "/:id",
   getProdutoById
 );
+
+router.get("/:id/imagem", getImagemProduto);
+router.put(
+  "/:id/imagem",
+  authorize("admin", "gestor"),
+  express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: "1mb" }),
+  updateImagemProduto,
+);
+router.delete("/:id/imagem", authorize("admin", "gestor"), deleteImagemProduto);
 
 
 // Atualizar produto

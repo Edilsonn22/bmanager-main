@@ -1,4 +1,4 @@
-# API Vendai
+# API Vendaí
 
 Base local: `http://localhost:3000/api`. As rotas protegidas exigem `Authorization: Bearer <token>`.
 

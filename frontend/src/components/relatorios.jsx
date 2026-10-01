@@ -81,7 +81,8 @@ function Relatorios() {
     Number(produto?.stock ?? produto?.quantidade ?? 0);
 
   const formatarMzn = (valor) => {
-    return `${Number(valor || 0).toLocaleString("pt-MZ")} Mzn`;
+    const arredondado = Math.round((Number(valor || 0) + Number.EPSILON) * 100) / 100;
+    return `${arredondado.toLocaleString("pt-MZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Mzn`;
   };
 
   // =====================================================
@@ -449,7 +450,7 @@ function Relatorios() {
 
   const vendasFiltradas = useMemo(() => {
     return movimentosFiltrados.filter(
-      (movimento) => movimento.tipo === "saida",
+      (movimento) => movimento.origem === "venda" || movimento.origem === "devolucao",
     );
   }, [movimentosFiltrados]);
 
@@ -475,7 +476,8 @@ function Relatorios() {
 
       const preco = Number(movimento.preco_unitario ?? produto?.preco ?? 0);
 
-      const valor = quantidade * preco;
+      const valor = Number(movimento.valor_total ?? quantidade * preco)
+        * (movimento.origem === "devolucao" ? -1 : 1);
 
       if (!agrupado[chave]) {
         agrupado[chave] = 0;
@@ -534,30 +536,29 @@ function Relatorios() {
     vendasFiltradas.forEach((movimento) => {
       const produto = getProdutoDoMovimento(movimento);
 
-      if (!produto) {
-        return;
-      }
-
       const quantidade = Number(movimento.quantidade || 0);
 
-      const preco = Number(movimento.preco_unitario ?? produto.preco ?? 0);
+      const preco = Number(movimento.preco_unitario ?? produto?.preco ?? 0);
 
-      receitaTotal += preco * quantidade;
+      const sinal = movimento.origem === "devolucao" ? -1 : 1;
+      receitaTotal += Number(movimento.valor_total ?? preco * quantidade) * sinal;
 
-      quantidadeTotal += quantidade;
+      quantidadeTotal += quantidade * sinal;
 
-      const nome = produto.nome || movimento.nomeProduto || "—";
+      const nome = produto?.nome || movimento.nomeProduto || "—";
 
       quantidadePorProduto[nome] =
-        (quantidadePorProduto[nome] || 0) + quantidade;
+        (quantidadePorProduto[nome] || 0) + quantidade * sinal;
     });
 
     const ticketMedio =
-      vendasFiltradas.length > 0 ? receitaTotal / vendasFiltradas.length : 0;
+      vendasFiltradas.filter((movimento) => movimento.origem === "venda").length > 0
+        ? receitaTotal / vendasFiltradas.filter((movimento) => movimento.origem === "venda").length
+        : 0;
 
-    const maisVendido = Object.entries(quantidadePorProduto).sort(
-      (a, b) => b[1] - a[1],
-    )[0];
+    const maisVendido = Object.entries(quantidadePorProduto)
+      .filter(([, quantidade]) => quantidade > 0)
+      .sort((a, b) => b[1] - a[1])[0];
 
     return {
       receitaTotal,
@@ -575,7 +576,7 @@ function Relatorios() {
     const totalProdutos = produtosFiltrados.length;
 
     const valorEmStock = produtosFiltrados.reduce(
-      (soma, produto) => soma + Number(produto.preco || 0) * getStock(produto),
+      (soma, produto) => soma + Number(produto.precoFornecedor || 0) * getStock(produto),
       0,
     );
 
@@ -607,15 +608,12 @@ function Relatorios() {
     vendasFiltradas.forEach((movimento) => {
       const produto = getProdutoDoMovimento(movimento);
 
-      if (!produto) {
-        return;
-      }
-
       const quantidade = Number(movimento.quantidade || 0);
 
-      receitaTotal += Number(movimento.preco_unitario ?? produto.preco ?? 0) * quantidade;
+      const sinal = movimento.origem === "devolucao" ? -1 : 1;
+      receitaTotal += Number(movimento.valor_total ?? Number(movimento.preco_unitario ?? produto?.preco ?? 0) * quantidade) * sinal;
 
-      custoTotal += Number(movimento.custo_unitario ?? produto.precoFornecedor ?? 0) * quantidade;
+      custoTotal += Number(movimento.custo_total ?? Number(movimento.custo_unitario ?? produto?.precoFornecedor ?? 0) * quantidade) * sinal;
     });
 
     const lucroBruto = receitaTotal - custoTotal;
@@ -702,7 +700,7 @@ function Relatorios() {
           bg: "bg-blue-50",
         },
         {
-          label: "Valor em Stock",
+          label: "Valor de stock ao custo",
           value: formatarMzn(statsProdutos.valorEmStock),
           icon: DollarSign,
           color: "text-green-500",
@@ -841,7 +839,7 @@ function Relatorios() {
 
           categoria: getCategoriaMovimento(movimento),
 
-          tipo: "Saída",
+          tipo: movimento.origem === "devolucao" ? "Devolução" : "Venda",
 
           quantidade: Number(movimento.quantidade || 0),
         };
@@ -930,7 +928,7 @@ function Relatorios() {
       const { totalProdutos, totalUnidades } = getResumoExportacao();
 
       const linhas = [
-        ["VENDAI"],
+        ["VENDAÍ"],
         [getTituloRelatorio()],
         [],
         ["Período:", `${periodoInicio} → ${periodoFim}`],
@@ -997,7 +995,7 @@ function Relatorios() {
 
       doc.setFontSize(18);
 
-      doc.text("VENDAI", 105, 18, {
+      doc.text("VENDAÍ", 105, 18, {
         align: "center",
       });
 
@@ -1199,14 +1197,14 @@ function Relatorios() {
         {/* BOTÕES */}
 
         <div className="flex flex-col sm:flex-row gap-2">
-          <button
+          {/*<button
             onClick={exportarCSV}
             disabled={loading || dadosExportacao.length === 0}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-600 text-white text-sm font-medium hover:bg-slate-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FileSpreadsheet className="w-4 h-4" />
             Exportar CSV
-          </button>
+          </button>*/}
           <button
             onClick={exportarExcel}
             disabled={loading || dadosExportacao.length === 0}
@@ -1576,7 +1574,7 @@ function Relatorios() {
               produtos={produtos}
               categorias={categorias}
               getCategoriaMovimento={getCategoriaMovimento}
-              mostrarTipo={abaAtiva === "financeiro"}
+              mostrarTipo={abaAtiva !== "produtos"}
               formatarMzn={formatarMzn}
             />
           )}
@@ -1601,9 +1599,9 @@ function TabelaProdutos({ produtos, getStock, getCategoria, formatarMzn }) {
 
           <th className="p-3 text-center">Stock</th>
 
-          <th className="p-3 text-right">Preço</th>
+          <th className="p-3 text-right">Custo unitário</th>
 
-          <th className="p-3 text-right">Valor em Stock</th>
+          <th className="p-3 text-right">Valor do stock ao custo</th>
         </tr>
       </thead>
 
@@ -1618,7 +1616,7 @@ function TabelaProdutos({ produtos, getStock, getCategoria, formatarMzn }) {
           produtos.map((produto) => {
             const stock = getStock(produto);
 
-            const preco = Number(produto.preco || 0);
+            const preco = Number(produto.precoFornecedor || 0);
 
             return (
               <tr key={produto.id} className="hover:bg-gray-50 transition">
@@ -1706,9 +1704,14 @@ function TabelaMovimentos({
 
             const quantidade = Number(movimento.quantidade || 0);
 
-            const preco = movimento.tipo === "saida"
+            const preco = movimento.origem === "devolucao"
+              ? Number(movimento.preco_unitario || 0)
+              : movimento.tipo === "saida"
               ? Number(movimento.preco_unitario ?? produto?.preco ?? 0)
               : Number(movimento.custo_unitario ?? produto?.precoFornecedor ?? 0);
+
+            const valorBase = Number(movimento.valor_total ?? preco * quantidade);
+            const valor = valorBase * (movimento.origem === "devolucao" ? -1 : 1);
 
             const categoria = getCategoriaMovimento(movimento);
 
@@ -1724,18 +1727,22 @@ function TabelaMovimentos({
                   <td className="p-3">
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        movimento.tipo === "saida"
+                        movimento.origem === "devolucao"
+                          ? "bg-amber-100 text-amber-800"
+                          : movimento.tipo === "saida"
                           ? "bg-red-100 text-red-700"
                           : "bg-green-100 text-green-700"
                       }`}
                     >
-                      {movimento.tipo === "saida" ? (
+                      {movimento.origem === "devolucao" ? (
+                        <ArrowUpCircle className="w-3 h-3" />
+                      ) : movimento.tipo === "saida" ? (
                         <ArrowDownCircle className="w-3 h-3" />
                       ) : (
                         <ArrowUpCircle className="w-3 h-3" />
                       )}
 
-                      {movimento.tipo === "saida" ? "Venda" : "Entrada"}
+                      {movimento.origem === "devolucao" ? "Devolução" : movimento.tipo === "saida" ? "Venda" : "Entrada"}
                     </span>
                   </td>
                 )}
@@ -1749,7 +1756,7 @@ function TabelaMovimentos({
                 <td className="p-3 text-center">{quantidade}</td>
 
                 <td className="p-3 text-right font-semibold text-gray-800">
-                  {formatarMzn(preco * quantidade)}
+                  {formatarMzn(valor)}
                 </td>
               </tr>
             );

@@ -62,7 +62,8 @@ function Financeiro() {
    * Formatar valores em MZN
    */
   const formatarMzn = (valor) => {
-    return `${Number(valor || 0).toLocaleString("pt-MZ")} Mzn`;
+    const arredondado = Math.round((Number(valor || 0) + Number.EPSILON) * 100) / 100;
+    return `${arredondado.toLocaleString("pt-MZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Mzn`;
   };
 
   /*
@@ -110,17 +111,13 @@ function Financeiro() {
      * Apenas movimentos do tipo "saida"
      * representam vendas.
      */
-    const vendas = movimentos.filter(
-      (movimento) => movimento.tipo === "saida"
-    );
+    const vendas = movimentos.filter((movimento) => movimento.origem === "venda");
+    const devolucoes = movimentos.filter((movimento) => movimento.origem === "devolucao");
 
     vendas.forEach((movimento) => {
       const produto = produtos.find(
         (p) => Number(p.id) === Number(movimento.produtoId)
       );
-      if (!produto) {
-        return;
-      }
 
       const quantidadeVendida = Number(movimento.quantidade || 0);
 
@@ -128,18 +125,24 @@ function Financeiro() {
        * preco = preço de venda
        * precoFornecedor = preço de compra
        */
-      const precoVenda = Number(movimento.preco_unitario ?? produto.preco ?? 0);
+      const precoVenda = Number(movimento.preco_unitario ?? produto?.preco ?? 0);
       const precoFornecedor = Number(
-        movimento.custo_unitario ?? produto.precoFornecedor ?? 0
+        movimento.custo_unitario ?? produto?.precoFornecedor ?? 0
       );
 
-      receitaTotal += precoVenda * quantidadeVendida;
+      receitaTotal += Number(movimento.valor_total ?? precoVenda * quantidadeVendida);
 
       /*
        * Custo:
        * preço do fornecedor × quantidade vendida
        */
-      custoTotal += precoFornecedor * quantidadeVendida;
+      custoTotal += Number(movimento.custo_total ?? precoFornecedor * quantidadeVendida);
+    });
+
+    devolucoes.forEach((movimento) => {
+      const quantidadeDevolvida = Number(movimento.quantidade || 0);
+      receitaTotal -= Number(movimento.valor_total ?? Number(movimento.preco_unitario || 0) * quantidadeDevolvida);
+      custoTotal -= Number(movimento.custo_total ?? Number(movimento.custo_unitario || 0) * quantidadeDevolvida);
     });
 
 
@@ -201,9 +204,9 @@ function Financeiro() {
 
 
   return (
-    <div className="financeiro-page flex-1 h-screen overflow-auto p-7 py-6 bg-gray-50">
+    <div className="financeiro-page h-dvh min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-7">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Visão financeira</h2>
 
@@ -212,8 +215,8 @@ function Financeiro() {
           </p>
         </div>
 
-        <Link to="/movimentar">
-          <button className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition flex items-center gap-2 font-semibold shadow-sm">
+        <Link to="/movimentar" className="w-full sm:w-auto">
+          <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-indigo-700 sm:w-auto">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -247,7 +250,7 @@ function Financeiro() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mb-10">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:mb-10 lg:grid-cols-4 lg:gap-7">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
@@ -395,11 +398,12 @@ function Financeiro() {
 
                     const quantidade = Number(movimento.quantidade || 0);
 
-                    const preco = movimento.tipo === "saida"
-                      ? Number(movimento.preco_unitario ?? produto?.preco ?? 0)
+                    const preco = movimento.origem === "venda" || movimento.origem === "devolucao"
+                      ? Number(movimento.preco_unitario || 0)
                       : Number(movimento.custo_unitario ?? produto?.precoFornecedor ?? 0);
 
-                    const valor = preco * quantidade;
+                    const valorBase = Number(movimento.valor_total ?? preco * quantidade);
+                    const valor = valorBase * (movimento.origem === "devolucao" ? -1 : 1);
 
                     return (
                       <tr key={movimento.id} className=" hover:bg-gray-50">
@@ -410,15 +414,20 @@ function Financeiro() {
                         </td>
 
                         <td className="p-4 text-center">
-                          {movimento.tipo === "saida" ? (
+                          {movimento.origem === "devolucao" ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                              <ArrowUpCircle className="w-3 h-3" />
+                              Devolução
+                            </span>
+                          ) : movimento.origem === "venda" || (movimento.origem === "manual" && movimento.tipo === "saida") ? (
                             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
                               <ArrowDownCircle className="w-3 h-3" />
-                              Venda
+                              {movimento.origem === "venda" ? "Venda" : "Saída de stock"}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                               <ArrowUpCircle className="w-3 h-3" />
-                              Entrada
+                              {movimento.origem === "manual" && movimento.tipo === "saida" ? "Saída de stock" : movimento.origem === "manual" ? "Entrada de stock" : "Entrada"}
                             </span>
                           )}
                         </td>

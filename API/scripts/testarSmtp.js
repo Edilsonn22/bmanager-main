@@ -11,8 +11,8 @@ try {
   if (destino) {
     const resultado = await enviarEmail({
       para: destino,
-      assunto: "Teste SMTP da Vendai",
-      html: "<p>O envio SMTP da Vendai está configurado corretamente.</p>",
+      assunto: "Teste SMTP da Vendaí",
+      html: "<p>O envio SMTP da Vendaí está configurado corretamente.</p>",
     });
     if (!resultado.enviado) throw new Error("Configuração SMTP incompleta.");
     console.log("E-mail de teste enviado.");

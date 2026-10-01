@@ -1,21 +1,26 @@
 {
-  "id": "/scanner",
-  "name": "Vendai Scanner",
-  "short_name": "Scanner",
-  "description": "Leitor de códigos de barras do Vendai",
-  "start_url": "/scanner",
+  "id": "/",
+  "name": "Vendaí",
+  "short_name": "Vendaí",
+  "description": "Gestão comercial e financeira para o seu negócio.",
+  "start_url": "/painel",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#020617",
-  "theme_color": "#020617",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/vendai-scanner.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

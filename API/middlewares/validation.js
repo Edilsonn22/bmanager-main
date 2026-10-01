@@ -4,14 +4,17 @@ const metodosComCorpo = new Set(["POST", "PUT", "PATCH"]);
 // As validações de campos específicos permanecem nos respetivos controladores.
 export const validarCorpoJson = (req, res, next) => {
   if (!metodosComCorpo.has(req.method) || req.path.startsWith("/api/webhooks")) return next();
+  const tipo = req.headers["content-type"] || "";
+  if (/^\/api\/produtos\/\d+\/imagem$/.test(req.path) && tipo.startsWith("image/")) return next();
   const temCorpo = Number(req.headers["content-length"] || 0) > 0 || Boolean(req.headers["transfer-encoding"]);
   if (!temCorpo) return next();
-  const tipo = req.headers["content-type"] || "";
   if (!tipo.includes("application/json")) {
-    return res.status(415).json({ message: "Envie os dados no formato application/json." });
+    const erro = "Envie os dados no formato application/json.";
+    return res.status(415).json({ sucesso: false, erro, message: erro });
   }
   if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
-    return res.status(400).json({ message: "O corpo da solicitação deve ser um objeto JSON válido." });
+    const erro = "O corpo da solicitação deve ser um objeto JSON válido.";
+    return res.status(400).json({ sucesso: false, erro, message: erro });
   }
   return next();
 };

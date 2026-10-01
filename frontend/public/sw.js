@@ -1,5 +1,14 @@
-const CACHE_NAME = "vendai-scanner-v3";
-const APP_SHELL = ["/", "/scanner", "/manifest.webmanifest", "/vendai-scanner.svg"];
+const CACHE_NAME = "vendai-system-pwa-v2";
+const APP_SHELL = [
+  "/",
+  "/painel",
+  "/scanner",
+  "/manifest.webmanifest",
+  "/manifest-scanner.webmanifest",
+  "/app-icon-192.png",
+  "/app-icon-512.png",
+  "/vendai-scanner.svg",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -28,14 +37,20 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request).catch(async () => {
-        const scanner = await caches.match("/scanner");
-        return scanner || caches.match("/");
+        const fallback = url.pathname.startsWith("/scanner") ? "/scanner" : "/";
+        return (await caches.match(fallback)) || caches.match("/");
       }),
     );
     return;
   }
 
-  if (url.pathname.startsWith("/assets/") || ["/manifest.webmanifest", "/vendai-scanner.svg"].includes(url.pathname)) {
+  if (url.pathname.startsWith("/assets/") || [
+    "/manifest.webmanifest",
+    "/manifest-scanner.webmanifest",
+    "/app-icon-192.png",
+    "/app-icon-512.png",
+    "/vendai-scanner.svg",
+  ].includes(url.pathname)) {
     event.respondWith(
       caches.match(request).then((cached) => cached || fetch(request).then((response) => {
         if (!response.ok) return response;

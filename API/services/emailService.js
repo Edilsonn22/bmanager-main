@@ -7,10 +7,10 @@ const escaparHtml = (valor = "") => String(valor)
 
 const layout = (titulo, conteudo) => `
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#1e293b">
-    <h1 style="color:#4f46e5">Vendai</h1>
+    <h1 style="color:#4f46e5">Vendaí</h1>
     <h2>${escaparHtml(titulo)}</h2>
     ${conteudo}
-    <p style="margin-top:32px;color:#64748b;font-size:13px">Esta é uma mensagem automática da Vendai.</p>
+    <p style="margin-top:32px;color:#64748b;font-size:13px">Esta é uma mensagem automática da Vendaí.</p>
   </div>`;
 
 const criarTransportador = () => {
@@ -70,13 +70,13 @@ export const enviarEmailSeguro = async (dados) => {
 
 export const enviarBoasVindas = ({ para, nome, empresa }) => enviarEmailSeguro({
   para,
-  assunto: "Bem-vindo à Vendai",
+  assunto: "Bem-vindo à Vendaí",
   html: layout("Conta criada com sucesso", `<p>Olá, ${escaparHtml(nome)}.</p><p>A empresa <strong>${escaparHtml(empresa)}</strong> está pronta. O seu período de teste gratuito já está ativo.</p>`),
 });
 
 export const enviarRecuperacaoSenha = ({ para, link }) => enviarEmailSeguro({
   para,
-  assunto: "Recuperação de senha da Vendai",
+  assunto: "Recuperação de senha da Vendaí",
   html: layout("Recupere a sua senha", `<p>Recebemos um pedido para redefinir a sua senha.</p><p><a style="display:inline-block;padding:12px 18px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px" href="${escaparHtml(link)}">Redefinir senha</a></p><p>Este link expira em 30 minutos. Se não solicitou esta alteração, ignore este e-mail.</p>`),
 });
 
@@ -89,6 +89,6 @@ export const enviarConfirmacaoPagamento = ({ para, plano, valor, moeda = "MZN" }
 export const enviarAvisoExpiracao = ({ para, plano, data }) => enviarEmailSeguro({
   para,
   assunto: "A sua assinatura está a expirar",
-  html: layout("Renove a sua assinatura", `<p>O plano <strong>${escaparHtml(plano)}</strong> expira em <strong>${escaparHtml(data)}</strong>.</p><p>Entre na Vendai para renovar e manter o acesso sem interrupções.</p>`),
+  html: layout("Renove a sua assinatura", `<p>O plano <strong>${escaparHtml(plano)}</strong> expira em <strong>${escaparHtml(data)}</strong>.</p><p>Entre na Vendaí para renovar e manter o acesso sem interrupções.</p>`),
 });
 import nodemailer from "nodemailer";

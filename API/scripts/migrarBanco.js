@@ -30,6 +30,10 @@ const checksumsHistoricos = {
   // Versões que chegaram a bases reais antes das migrações se tornarem imutáveis.
   "005_operacao_saas.sql": ["9c58578e404ae5984d7b8b3391c42b05ac35ad2654de8e442216d07d6acbcd53"],
   "011_vendas_clientes_caixa.sql": ["15534d13e270d8af32325745853989a61e89e95431b31ed19652c614bddee372"],
+  "014_apresentacoes_produto.sql": ["c2975d88bd25118747369a96a04205b453c2500acc9b51a9d081db73f83c69f5"],
+  "015_embalagem_vendavel.sql": ["4fd2b337ea751c277306f171509ff2a041b5f7a86a58689f5204ddb1adfe8cb1"],
+  "017_arquivamento_produtos.sql": ["e66b318057faddc4e02d840e546665e49b0475aa3a0b8db51f672ee941fe5ff3"],
+  "018_proteger_historico_caixa.sql": ["3353653e70e5cddf6e4cd5856c063d700e1bfef06ab8e4d24265f1439f6740f2"],
 };
 
 const migrations = await Promise.all(nomes.map(async (nome) => {
@@ -93,6 +97,7 @@ const validarBaseline = async () => {
     ["Empresa", "telefone"], ["Empresa", "endereco"], ["Empresa", "session_version"],
     ["Usuario", "token_version"], ["Produto", "estoque_minimo"], ["Produto", "codigo_barras"],
     ["Produto", "tipo_produto"], ["Produto", "unidade_base"], ["Produto", "arquivado_em"],
+    ["Produto", "imagem"], ["Produto", "imagem_mime"],
     ["Movimentos", "preco_unitario"], ["Movimentos", "custo_unitario"],
     ["Movimentos", "origem"], ["Movimentos", "motivo"], ["Movimentos", "venda_id"],
     ["Venda", "cliente_nome"], ["VendaItem", "apresentacao_nome"],

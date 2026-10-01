@@ -10,10 +10,20 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { API_URL } from "../api/authenticatedFetch";
+import { useAuth } from "../features/auth/AuthContext";
 import { Feedback } from "./ui/Feedback";
 
 const dinheiro = (v) =>
   `${Number(v || 0).toLocaleString("pt-MZ", { minimumFractionDigits: 2 })} MZN`;
+const totalLiquidoVenda = (venda) => {
+  if (venda.valor_devolvido != null) {
+    return Number(venda.total || 0) - Number(venda.valor_devolvido || 0);
+  }
+  return Number(venda.total_liquido ?? venda.total ?? 0);
+};
+const codigoVenda = (venda) =>
+  venda.codigo ||
+  `VEN-${new Date(venda.created_at).getFullYear()}-${String(venda.numero).padStart(6, "0")}`;
 const badge = (estado) =>
   estado === "cancelada"
     ? "bg-red-50 text-red-700 ring-red-600/10"
@@ -27,18 +37,28 @@ const estadoLabel = (estado) =>
     parcialmente_devolvida: "Devolução parcial",
     devolvida: "Devolvida",
   })[estado] || estado?.replaceAll("_", " ");
-const pagamentoLabel = (forma) =>
-  ({
+const pagamentoLabel = (forma) => {
+  const labels = {
     dinheiro: "Dinheiro",
     cartao: "Cartão",
     transferencia: "Transferência",
     credito: "Crédito",
     mpesa: "M-Pesa",
     emola: "e-Mola",
-  })[forma] || forma;
+  };
+  return String(forma || "")
+    .split(",")
+    .filter(Boolean)
+    .map((metodo) => labels[metodo] || metodo)
+    .join(" + ");
+};
 
 export default function Vendas() {
+  const { usuario } = useAuth();
+  const podeRevisarOffline = ["admin", "gestor"].includes(usuario?.role);
   const [vendas, setVendas] = useState([]);
+  const [offlinePendentes, setOfflinePendentes] = useState([]);
+  const [reprocessando, setReprocessando] = useState(null);
   const [busca, setBusca] = useState("");
   const [estado, setEstado] = useState("");
   const [erro, setErro] = useState("");
@@ -55,19 +75,64 @@ export default function Vendas() {
       )
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!podeRevisarOffline) return undefined;
+    let ativo = true;
+    fetch(`${API_URL}/vendas/offline-pendentes`)
+      .then(async (resposta) => {
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.erro);
+        if (ativo) setOfflinePendentes(dados.pendentes || []);
+      })
+      .catch((error) => {
+        if (ativo) setErro(error.message || "Não foi possível carregar as vendas pendentes.");
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [podeRevisarOffline]);
+
+  const reprocessarVenda = async (pendente) => {
+    setReprocessando(pendente.id);
+    setErro("");
+    try {
+      const resposta = await fetch(
+        `${API_URL}/vendas/offline-pendentes/${pendente.id}/reprocessar`,
+        { method: "POST" },
+      );
+      const dados = await resposta.json();
+      if (!resposta.ok) throw new Error(dados.erro || "Não foi possível reprocessar a venda.");
+      if (dados.requer_revisao) {
+        setOfflinePendentes((atuais) => atuais.map((item) =>
+          item.id === pendente.id ? { ...item, motivo: dados.erro } : item,
+        ));
+        setErro(dados.erro || "A venda continua pendente de revisão.");
+        return;
+      }
+      setOfflinePendentes((atuais) => atuais.filter((item) => item.id !== pendente.id));
+      const respostaVendas = await fetch(`${API_URL}/vendas`);
+      const dadosVendas = await respostaVendas.json();
+      if (respostaVendas.ok) setVendas(dadosVendas.vendas || []);
+    } catch (error) {
+      setErro(error.message || "Não foi possível reprocessar a venda.");
+    } finally {
+      setReprocessando(null);
+    }
+  };
   const lista = useMemo(
     () =>
       vendas.filter(
         (v) =>
           (!estado || v.estado === estado) &&
-          `${v.numero} ${v.cliente || ""} ${v.operador}`
+          `${codigoVenda(v)} ${v.numero} ${v.cliente || ""} ${v.operador}`
             .toLowerCase()
             .includes(busca.toLowerCase()),
       ),
     [vendas, busca, estado],
   );
   const validas = vendas.filter((v) => v.estado !== "cancelada");
-  const total = validas.reduce((s, v) => s + Number(v.total), 0);
+  const total = validas.reduce((s, v) => s + totalLiquidoVenda(v), 0);
   return (
     <main className="commerce-page h-dvh min-w-0 flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
       <header className="commerce-header mb-6 flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -91,6 +156,47 @@ export default function Vendas() {
       <Feedback tipo="erro" className="mb-4">
         {erro}
       </Feedback>
+      {podeRevisarOffline && offlinePendentes.length > 0 && (
+        <section className="commerce-panel mb-6 overflow-hidden border-l-4 border-l-amber-500" aria-label="Vendas offline para revisão">
+          <header className="border-b border-slate-100 p-4 sm:p-5">
+            <h2 className="font-bold text-slate-900">Vendas offline para revisão</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Confirme cada venda depois de verificar o stock e o preço registados no dispositivo.
+            </p>
+          </header>
+          <ul className="divide-y divide-slate-100">
+            {offlinePendentes.map((pendente) => {
+              const payload = pendente.payload || {};
+              const totalOffline = (payload.pagamentos || []).reduce(
+                (soma, pagamento) => soma + Number(pagamento.valor || 0),
+                0,
+              );
+              return (
+                <li key={pendente.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">
+                      {pendente.operador} · {new Date(pendente.created_at).toLocaleString("pt-MZ")}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {(payload.itens || []).map((item) => `${item.quantidade} × ${item.nome_produto || `Produto ${item.produto_id}`}`).join(" · ")}
+                      {" · "}{dinheiro(totalOffline)}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-amber-800">{pendente.motivo}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => reprocessarVenda(pendente)}
+                    disabled={reprocessando !== null}
+                    className="shrink-0 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {reprocessando === pendente.id ? "A verificar..." : "Confirmar venda"}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       <section
         className="mb-6 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(260px,1.25fr)]"
         aria-label="Resumo das vendas"
@@ -109,7 +215,7 @@ export default function Vendas() {
         />
         <Resumo
           icon={Banknote}
-          label="Total vendido"
+          label="Total vendido líquido"
           value={dinheiro(total)}
           apoio="Receita das vendas válidas"
           destaque
@@ -194,12 +300,12 @@ export default function Vendas() {
                   <td className="min-w-0  text-center">
                     <Link
                       to={`/vendas/${v.id}`}
-                      className="font-extrabold text-indigo-600 hover:text-indigo-800"
+                      className="font-extrabold text-indigo-600 whitespace-nowrap hover:text-indigo-800"
                     >
-                      #{String(v.numero).padStart(6, "0")}
+                      {codigoVenda(v)}
                     </Link>
                   </td>
-                  <td className="min-w-0 break-words text-center text-sm text-slate-600">
+                  <td className="min-w-0 break-words text-right text-sm text-slate-600">
                     {new Date(v.created_at).toLocaleString("pt-MZ", {
                       dateStyle: "short",
                       timeStyle: "short",
@@ -219,7 +325,14 @@ export default function Vendas() {
                     </span>
                   </td>
                   <td className="min-w-0 break-words text-center font-extrabold text-slate-900">
-                    {dinheiro(v.total)}
+                    <span className="block">
+                      {dinheiro(totalLiquidoVenda(v))}
+                    </span>
+                    {Number(v.valor_devolvido) > 0 && (
+                      <small className="block text-amber-700">
+                        Devolvido: {dinheiro(v.valor_devolvido)}
+                      </small>
+                    )}
                   </td>
                   <td className="min-w-0 break-words text-center">
                     <span
@@ -246,7 +359,7 @@ export default function Vendas() {
                     Venda
                   </span>
                   <strong className="mt-0.5 block text-indigo-700">
-                    #{String(v.numero).padStart(6, "0")}
+                    {codigoVenda(v)}
                   </strong>
                 </div>
                 <span
@@ -272,7 +385,14 @@ export default function Vendas() {
                     {pagamentoLabel(v.forma_pagamento)} · {v.operador}
                   </p>
                   <b className="mt-1 block break-words text-lg text-slate-900">
-                    {dinheiro(v.total)}
+                    <span className="block">
+                      {dinheiro(totalLiquidoVenda(v))}
+                    </span>
+                    {Number(v.valor_devolvido) > 0 && (
+                      <small className="mt-1 block text-right text-xs text-amber-700">
+                        Devolvido: {dinheiro(v.valor_devolvido)}
+                      </small>
+                    )}
                   </b>
                 </div>
                 <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-50 text-slate-400 transition group-hover:bg-indigo-50 group-hover:text-indigo-600">

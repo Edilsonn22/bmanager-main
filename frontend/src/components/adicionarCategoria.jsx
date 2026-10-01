@@ -66,18 +66,19 @@ export default function AdicionarCategoria() {
         </label>
         <div className="flex gap-3">
           <button
-            disabled={loading}
-            className="flex-1 rounded-lg bg-indigo-600 py-2 text-white disabled:opacity-50"
-          >
-            {loading ? "A guardar..." : "Guardar"}
-          </button>
-          <button
             type="button"
             onClick={() => navigate(location.state?.returnTo || -1)}
             className="flex-1 rounded-lg bg-gray-100 py-2"
           >
             Cancelar
           </button>
+          <button
+            disabled={loading}
+            className="flex-1 rounded-lg bg-indigo-600 py-2 text-white disabled:opacity-50"
+          >
+            {loading ? "A guardar..." : "Guardar"}
+          </button>
+          
         </div>
       </form>
     </div>

@@ -44,7 +44,7 @@ export default function PlanosAdmin() {
   const alterar = (campo) => (event) =>
     setForm({ ...form, [campo]: event.target.value });
   return (
-    <main className="flex-1 overflow-auto bg-slate-50 p-7">
+    <main className="h-dvh min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-7">
       <h1 className="text-2xl font-bold">Gestão de planos</h1>
       <p className="mt-1 text-slate-600">
         Apenas administradores da plataforma podem criar ou alterar planos.

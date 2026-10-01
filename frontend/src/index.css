@@ -1,76 +1,29 @@
 @import "tailwindcss";
 
-@keyframes landing-enter { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes landing-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-@keyframes landing-orb { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(24px, 18px, 0) scale(1.08); } }
-@keyframes landing-shine { from { transform: translateX(-140%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
-@keyframes landing-nav-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes landing-dashboard-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-@keyframes landing-pulse-soft { 0%, 100% { box-shadow: 0 0 0 0 rgb(79 70 229 / 0); } 50% { box-shadow: 0 0 0 6px rgb(79 70 229 / .07); } }
-@keyframes landing-showcase-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(15deg); } 75% { transform: rotate(-8deg); } }
-.landing-page { isolation: isolate; position: relative; }
-.landing-nav { animation: landing-nav-in 420ms ease-out both; }
-.landing-grid { background-image: linear-gradient(rgb(99 102 241 / 0.055) 1px, transparent 1px), linear-gradient(90deg, rgb(99 102 241 / 0.055) 1px, transparent 1px); background-size: 64px 64px; mask-image: linear-gradient(to bottom, black, transparent 70%); }
-.landing-orb { display: none; }
-.landing-orb-one { top: 1rem; left: 7%; width: 24rem; height: 24rem; background: rgb(196 181 253 / 0.42); }
-.landing-orb-two { top: 17rem; right: 3%; width: 28rem; height: 28rem; background: rgb(186 230 253 / 0.46); animation-delay: -5s; }
-.landing-enter { animation: landing-enter 700ms cubic-bezier(.2,.7,.2,1) both; }
-.landing-delay { animation-delay: 150ms; }
-.landing-float { animation: landing-float 5.5s ease-in-out infinite; }
-.landing-float-delayed { animation-delay: -2.75s; }
-.landing-gradient-text { background: linear-gradient(110deg, #7c3aed, #4f46e5 52%, #0284c7); background-clip: text; -webkit-background-clip: text; color: transparent; }
-.landing-feature, .landing-dashboard { will-change: transform; }
-.landing-dashboard { animation: landing-dashboard-breathe 7s ease-in-out infinite; }
-.landing-feature span { transition: transform 240ms ease, background-color 240ms ease, color 240ms ease; }
-.landing-feature:hover span { transform: translateY(-2px) scale(1.04); }
-.landing-page a, .landing-page button { transition-duration: 200ms; }
-.landing-page a:active, .landing-page button:active { transform: scale(.98); }
-.landing-cta-glow { position: absolute; inset: -60% 20% auto; height: 20rem; border-radius: 9999px; background: rgb(255 255 255 / .18); filter: blur(70px); pointer-events: none; }
-.landing-page { scroll-behavior: smooth; }
-.landing-reveal { opacity: 0; transform: translateY(14px); transition: opacity 450ms ease, transform 450ms ease; }
+.landing-page { isolation: isolate; position: relative; scroll-behavior: smooth; }
+.landing-enter { animation: landing-enter 460ms ease-out both; }
+@keyframes landing-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.landing-delay { animation-delay: 90ms; }
+.landing-page a, .landing-page button { transition-duration: 160ms; }
+.landing-display { font-family: Georgia, "Times New Roman", serif; font-weight: 600; letter-spacing: 0; }
+.landing-reveal { opacity: 0; transform: translateY(8px); transition: opacity 280ms ease, transform 280ms ease; }
 .landing-reveal.is-visible { opacity: 1; transform: translateY(0); }
-.landing-feature:nth-child(2) { transition-delay: 100ms; }
-.landing-feature:nth-child(3) { transition-delay: 200ms; }
-.landing-feature:nth-child(4) { transition-delay: 60ms; }
-.landing-feature:nth-child(5) { transition-delay: 120ms; }
-.landing-feature:nth-child(6) { transition-delay: 180ms; }
-.landing-page #planos article:hover { transform: translateY(-4px); }
-.landing-page #planos article { transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease; }
-.landing-page #planos article:nth-child(2) button { animation: landing-pulse-soft 4s ease-in-out infinite; }
-.landing-dashboard::after { display: none; }
-.landing-product-shot { animation: landing-enter 420ms cubic-bezier(.2,.7,.2,1) both; }
-.landing-showcase-progress { animation: landing-showcase-progress 6s linear both; }
-.landing-showcase-progress.is-paused { animation-play-state: paused; }
-.landing-carousel button:focus-visible { outline: 2px solid rgb(148 163 184 / .75); outline-offset: 3px; }
+.landing-page button:focus-visible { outline: 2px solid #176b52; outline-offset: 3px; }
 .landing-mobile-nav { scrollbar-width: none; }
 .landing-mobile-nav::-webkit-scrollbar { display: none; }
 .landing-mobile-nav a { white-space: nowrap; }
-@media (max-width: 639px) {
-  .landing-orb { filter: blur(60px); }
-  .landing-orb-one { left: -9rem; width: 20rem; height: 20rem; }
-  .landing-orb-two { right: -11rem; width: 23rem; height: 23rem; }
-  .landing-grid { background-size: 42px 42px; }
-}
 .landing-logo { display: block; }
 @media (max-width: 479px) {
-  .landing-title { overflow-wrap: anywhere; }
-  .landing-eyebrow { width: 100%; justify-content: center; border-radius: 1rem; }
   .landing-actions > * { width: 100%; }
-  .landing-feature { text-align: left; }
 }
 @media (max-width: 359px) {
   .landing-nav { gap: .5rem; padding-left: .75rem; padding-right: .75rem; }
   .landing-nav .landing-logo { height: 1.75rem; }
   .landing-nav-actions { gap: .5rem; }
   .landing-login-link { display: none; }
-  .landing-eyebrow { font-size: .65rem; line-height: 1rem; }
 }
-@media (min-width: 1536px) and (min-height: 850px) {
-  .landing-hero { min-height: 42rem; }
-  .landing-dashboard { transform: scale(1.02); }
-}
-@media (prefers-reduced-motion: reduce) { .landing-page, .landing-page *, .landing-orb { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } .landing-reveal { opacity: 1; transform: none; transition: none; } .landing-dashboard { transform: none !important; } }
+@media (prefers-reduced-motion: reduce) { .landing-page, .landing-page * { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } .landing-reveal { opacity: 1; transform: none; transition: none; } }
 
 @layer base {
 * {
@@ -85,6 +38,21 @@ body {
     background-color: rgb(232, 230, 230);
     color: black;
   }
+
+html, body, #root { min-width: 0; min-height: 100%; }
+img, svg, video, canvas { max-width: 100%; }
+.vendai-app { width: 100%; min-width: 0; }
+.vendai-app > main,
+.vendai-app > div { width: 100%; min-width: 0; }
+.vendai-app main { overscroll-behavior: contain; }
+.vendai-app input,
+.vendai-app select,
+.vendai-app textarea { max-width: 100%; }
+.vendai-app h1,
+.vendai-app h2,
+.vendai-app h3,
+.vendai-app p,
+.vendai-app dd { overflow-wrap: anywhere; }
 
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
@@ -167,8 +135,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (max-width: 639px) {
+  .vendai-app input,
+  .vendai-app select,
+  .vendai-app textarea { font-size: 1rem; }
+
+  .vendai-app main button:not([aria-label]),
+  .vendai-app main a:not([aria-label]) { min-height: 2.75rem; }
+
+  .vendai-app [role="dialog"] > article,
+  .vendai-app [role="dialog"] > section,
+  .vendai-app > .fixed > form,
+  .vendai-app > .fixed > div { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+
   .vendai-app > main,
-  .vendai-app > div:not([role="dialog"]) {
+  .vendai-app > div:not(.fixed):not([role="dialog"]) {
     min-width: 0;
   }
 
@@ -186,8 +166,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 @media (max-width: 767px) {
   .vendai-app > main,
-  .vendai-app > div:not([role="dialog"]) {
-    padding-top: 4.75rem;
+  .vendai-app > div:not(.fixed):not([role="dialog"]) {
+    padding-top: max(4.75rem, calc(env(safe-area-inset-top) + 4rem));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   }
 }
 
@@ -235,7 +216,205 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @page { size: A4 portrait; margin: 12mm; }
 @page receipt-thermal { size: 80mm auto; margin: 4mm; }
 
+@media screen {
+  .receipt-print--thermal {
+    width: min(80mm, 100%);
+    margin-inline: auto;
+    border: 1px solid #d6d3d1 !important;
+    border-radius: .25rem !important;
+    background: #fff !important;
+    color: #111 !important;
+    font-family: "Courier New", Courier, monospace !important;
+    box-shadow: 0 18px 45px rgb(15 23 42 / .12) !important;
+  }
+  .receipt-print--thermal .receipt-header {
+    padding: 1.25rem 1rem .9rem !important;
+    text-align: center;
+    background: #fff !important;
+    border-bottom: 1px dashed #78716c !important;
+  }
+  .receipt-print--thermal .receipt-header > div {
+    display: block !important;
+  }
+  .receipt-print--thermal .receipt-company {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 1.25rem;
+    font-weight: 900;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .receipt-print--thermal .receipt-company-details { color: #444 !important; }
+  .receipt-print--thermal .receipt-header h1 { font-size: 1rem !important; }
+  .receipt-print--thermal .receipt-header p { justify-content: center; }
+  .receipt-print--thermal .receipt-header > span { display: none; }
+  .receipt-print--thermal .receipt-status {
+    margin: .65rem auto 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    color: #111 !important;
+    font-size: .7rem;
+    text-transform: uppercase;
+  }
+  .receipt-print--thermal .receipt-info-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: .25rem !important;
+    padding: .75rem 1rem !important;
+    border-bottom: 1px dashed #78716c !important;
+  }
+  .receipt-print--thermal .receipt-info-grid > div {
+    display: flex;
+    justify-content: space-between;
+    gap: .75rem;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .receipt-print--thermal .receipt-info-grid > div > span { display: none; }
+  .receipt-print--thermal .receipt-info-grid > div > div {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    gap: .75rem;
+  }
+  .receipt-print--thermal .receipt-info-grid p {
+    margin: 0 !important;
+    color: #111 !important;
+    font-family: inherit;
+    font-size: .68rem;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .receipt-print--thermal .receipt-info-grid p:first-child::after { content: ":"; }
+  .receipt-print--thermal .receipt-info-grid p:last-child {
+    text-align: right;
+  }
+  .receipt-print--thermal > div:nth-of-type(2) { padding: 1rem !important; }
+  .receipt-print--thermal .receipt-items-heading {
+    margin-bottom: .4rem !important;
+    border-bottom: 1px dashed #78716c;
+    padding-bottom: .4rem;
+  }
+  .receipt-print--thermal .receipt-items-heading h2 {
+    font-size: .72rem;
+    text-transform: uppercase;
+  }
+  .receipt-print--thermal .receipt-items-heading p,
+  .receipt-print--thermal .receipt-items-icon { display: none !important; }
+  .receipt-thermal-items { width: 100%; }
+  .receipt-thermal-item {
+    border-bottom: 1px dotted #a8a29e;
+    padding: .55rem 0;
+  }
+  .receipt-thermal-item-name {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .5rem;
+    color: #111;
+    font-size: .72rem;
+    font-weight: 700;
+  }
+  .receipt-thermal-item-name > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .receipt-thermal-item-name small {
+    flex-shrink: 0;
+    color: #57534e;
+    font-size: .6rem;
+    font-weight: 400;
+  }
+  .receipt-thermal-item-values {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-top: .25rem;
+    padding-left: 1rem;
+    color: #292524;
+    font-size: .68rem;
+  }
+  .receipt-thermal-item-values strong {
+    flex-shrink: 0;
+    color: #111;
+    font-size: .72rem;
+  }
+  .receipt-thermal-returned {
+    display: block;
+    margin-top: .2rem;
+    padding-left: 1rem;
+    font-size: .58rem;
+    font-weight: 700;
+  }
+  .receipt-print--thermal .hidden:has(> table) {
+    display: block !important;
+    overflow-x: hidden !important;
+  }
+  .receipt-print--thermal .md\:hidden { display: none !important; }
+  .receipt-print--thermal table { table-layout: fixed; }
+  .receipt-print--thermal table { border-collapse: collapse; }
+  .receipt-print--thermal thead { border-bottom: 1px dashed #78716c; }
+  .receipt-print--thermal th {
+    background: transparent;
+    color: #111;
+    text-transform: uppercase;
+  }
+  .receipt-print--thermal th,
+  .receipt-print--thermal td {
+    border-bottom: 1px dotted #d6d3d1;
+    padding: .42rem .2rem;
+    font-family: inherit;
+    font-size: .65rem;
+  }
+  .receipt-print--thermal th:nth-child(3),
+  .receipt-print--thermal td:nth-child(3),
+  .receipt-print--thermal th:nth-child(5),
+  .receipt-print--thermal td:nth-child(5) { display: none; }
+  .receipt-print--thermal th:first-child { width: 48% !important; }
+  .receipt-print--thermal th:nth-child(2) { width: 16% !important; }
+  .receipt-print--thermal th:nth-child(4) { width: 36% !important; }
+  .receipt-print--thermal .receipt-payments,
+  .receipt-print--thermal .receipt-totals {
+    max-width: none !important;
+    margin-top: .75rem !important;
+    border: 0 !important;
+    border-top: 1px dashed #78716c !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    padding: .6rem 0 0 !important;
+  }
+  .receipt-print--thermal .receipt-payments svg,
+  .receipt-print--thermal .receipt-payments p { display: none; }
+  .receipt-print--thermal .receipt-payments h2 {
+    font-family: inherit;
+    font-size: .7rem;
+    text-transform: uppercase;
+  }
+  .receipt-print--thermal .receipt-payments * { font-family: inherit; }
+  .receipt-print--thermal .receipt-totals p { font-family: inherit; }
+  .receipt-print--thermal .receipt-totals p:nth-child(3) {
+    border-block: 2px solid #111 !important;
+    padding-block: .55rem !important;
+    font-size: 1rem !important;
+  }
+  .receipt-print--thermal .receipt-footer {
+    border-top: 1px dashed #78716c !important;
+    padding: 1rem;
+    color: #111 !important;
+    font-family: inherit;
+  }
+}
+
 @media print {
+  .commerce-page:has(.cash-close-report) > :not(.cash-close-overlay) { display: none !important; }
+  .cash-close-overlay { position: static !important; overflow: visible !important; background: #fff !important; padding: 0 !important; }
+  .cash-close-report { min-height: 0 !important; width: 100% !important; max-width: none !important; padding: 0 !important; box-shadow: none !important; }
+  .cash-close-report table { width: 100% !important; border-collapse: collapse !important; }
+  .cash-close-report tr { break-inside: avoid; page-break-inside: avoid; }
   html, body, #root, .vendai-app { min-height: 0 !important; height: auto !important; background: #fff !important; }
   body { color: #000 !important; font-family: Arial, Helvetica, sans-serif !important; print-color-adjust: economy; -webkit-print-color-adjust: economy; }
   .vendai-app aside, .print\:hidden { display: none !important; }
@@ -258,28 +437,69 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .receipt-print th { background: #eee !important; color: #000 !important; }
   .receipt-print th, .receipt-print td { border-bottom: 1px solid #bbb !important; padding: 2.5mm 2mm !important; font-size: 9.5pt !important; overflow-wrap: anywhere; }
   .receipt-print button { display: none !important; }
-  .receipt-print .ml-auto.mt-6 { break-inside: avoid; background: #fff !important; border-color: #999 !important; }
+  .receipt-print .receipt-payments,
+  .receipt-print .receipt-totals { break-inside: avoid; background: #fff !important; border-color: #999 !important; }
   .receipt-footer { display: block !important; break-inside: avoid; color: #333 !important; }
 
   .receipt-print--thermal {
     page: receipt-thermal;
     width: 72mm !important;
     font-size: 9pt !important;
+    font-family: "Courier New", Courier, monospace !important;
   }
-  .receipt-print--thermal .receipt-header { padding-bottom: 3mm !important; text-align: center; }
+  .receipt-print--thermal .receipt-header { padding-bottom: 3mm !important; text-align: center; border-bottom: 1px dashed #000 !important; }
   .receipt-print--thermal .receipt-header > div { display: block !important; }
   .receipt-print--thermal .receipt-status { margin: 2mm auto 0 !important; }
   .receipt-print--thermal .receipt-company { font-size: 13pt !important; }
   .receipt-print--thermal .receipt-company-details { font-size: 8pt !important; }
   .receipt-print--thermal > div:nth-of-type(1) { display: block !important; padding: 3mm 0 !important; }
-  .receipt-print--thermal > div:nth-of-type(1) > div { margin-bottom: 1.5mm; padding: 2mm !important; }
+  .receipt-print--thermal > div:nth-of-type(1) > div { margin-bottom: 1mm; padding: 0 !important; border: 0 !important; }
+  .receipt-print--thermal .receipt-info-grid { border-bottom: 1px dashed #000 !important; }
+  .receipt-print--thermal .receipt-info-grid > div > div {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+    gap: 2mm !important;
+  }
+  .receipt-print--thermal .receipt-info-grid p {
+    margin: 0 !important;
+    color: #000 !important;
+    font-family: inherit !important;
+    font-size: 7.5pt !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+  }
+  .receipt-print--thermal .receipt-info-grid p:last-child { text-align: right !important; }
+  .receipt-print--thermal .receipt-info-grid > div > span,
+  .receipt-print--thermal .receipt-items-icon { display: none !important; }
+  .receipt-print--thermal .receipt-items-heading { border-bottom: 1px dashed #000 !important; }
+  .receipt-print--thermal .receipt-thermal-item {
+    border-bottom: 1px dotted #777 !important;
+    padding: 1.5mm 0 !important;
+    break-inside: avoid;
+  }
+  .receipt-print--thermal .receipt-thermal-item-name,
+  .receipt-print--thermal .receipt-thermal-item-values {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 2mm !important;
+    font-family: inherit !important;
+    font-size: 7.5pt !important;
+  }
+  .receipt-print--thermal .receipt-thermal-item-name small { flex-shrink: 0; }
+  .receipt-print--thermal .receipt-thermal-item-values {
+    margin-top: 1mm !important;
+    padding-left: 3mm !important;
+  }
+  .receipt-print--thermal .receipt-thermal-item-values strong { flex-shrink: 0; }
   .receipt-print--thermal > div:nth-of-type(2) { padding: 3mm 0 0 !important; }
   .receipt-print--thermal > div:nth-of-type(2) > div:first-child { margin-bottom: 2mm !important; }
-  .receipt-print--thermal th, .receipt-print--thermal td { padding: 1.5mm .75mm !important; font-size: 7.5pt !important; }
+  .receipt-print--thermal th, .receipt-print--thermal td { padding: 1.5mm .75mm !important; font-family: inherit !important; font-size: 7.5pt !important; }
   .receipt-print--thermal th:nth-child(3), .receipt-print--thermal td:nth-child(3) { display: none; }
   .receipt-print--thermal th:first-child { width: 43% !important; }
   .receipt-print--thermal th:nth-child(2) { width: 14% !important; }
   .receipt-print--thermal th:nth-child(4) { width: 43% !important; }
-  .receipt-print--thermal .ml-auto.mt-6 { max-width: none !important; margin-top: 3mm !important; padding: 3mm 0 !important; border-width: 1px 0 0 !important; border-radius: 0 !important; }
-  .receipt-print--thermal .receipt-footer { padding: 3mm 0 0 !important; }
+  .receipt-print--thermal .receipt-payments,
+  .receipt-print--thermal .receipt-totals { max-width: none !important; margin-top: 3mm !important; padding: 3mm 0 !important; border-width: 1px 0 0 !important; border-style: dashed !important; border-radius: 0 !important; }
+  .receipt-print--thermal .receipt-footer { padding: 3mm 0 0 !important; border-top-style: dashed !important; font-family: inherit !important; }
 }

@@ -23,8 +23,6 @@ function Productos() {
   const [removendo, setRemovendo] = useState(false);
   const [mostrarArquivados, setMostrarArquivados] = useState(false);
 
-
-
   const formatarMzn = (valor) =>
     `${Number(valor || 0).toLocaleString("pt-MZ", {
       minimumFractionDigits: 2,
@@ -32,33 +30,65 @@ function Productos() {
     })} MZN`;
 
   const carregarDados = useCallback(async () => {
-    setLoading(true); setErro("");
+    setLoading(true);
+    setErro("");
     try {
-      const respostas = await Promise.all([fetch(`${API_URL}/produtos${mostrarArquivados ? "?estado=arquivados" : ""}`), fetch(`${API_URL}/categorias`), fetch(`${API_URL}/fornecedores`)]);
-      const dados = await Promise.all(respostas.map((res) => res.json().then((body) => ({ res, body }))));
-      const falha = dados.find(({ res, body }) => !res.ok || body.sucesso === false);
-      if (falha) throw new Error(falha.body.erro || "Não foi possível carregar os dados.");
-      setProdutos(dados[0].body.produtos || []); setCategorias(dados[1].body.categorias || []); setFornecedores(dados[2].body.fornecedores || []);
-    } catch (error) { setErro(error.message || "Não foi possível carregar os produtos."); }
-    finally { setLoading(false); }
+      const respostas = await Promise.all([
+        fetch(
+          `${API_URL}/produtos${mostrarArquivados ? "?estado=arquivados" : ""}`,
+        ),
+        fetch(`${API_URL}/categorias`),
+        fetch(`${API_URL}/fornecedores`),
+      ]);
+      const dados = await Promise.all(
+        respostas.map((res) => res.json().then((body) => ({ res, body }))),
+      );
+      const falha = dados.find(
+        ({ res, body }) => !res.ok || body.sucesso === false,
+      );
+      if (falha)
+        throw new Error(
+          falha.body.erro || "Não foi possível carregar os dados.",
+        );
+      setProdutos(dados[0].body.produtos || []);
+      setCategorias(dados[1].body.categorias || []);
+      setFornecedores(dados[2].body.fornecedores || []);
+    } catch (error) {
+      setErro(error.message || "Não foi possível carregar os produtos.");
+    } finally {
+      setLoading(false);
+    }
   }, [mostrarArquivados]);
 
-  useEffect(() => { carregarDados(); }, [carregarDados]);
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
 
   const handleDelete = async () => {
     if (!produtoExcluir) return;
-    setRemovendo(true); setErro(""); setSucesso("");
+    setRemovendo(true);
+    setErro("");
+    setSucesso("");
     try {
       const response = await fetch(`${API_URL}/produtos/${produtoExcluir.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.erro || "Não foi possível excluir o produto.");
-      setProdutos((atuais) => atuais.filter((p) => Number(p.id) !== Number(produtoExcluir.id)));
-      setSucesso("Produto arquivado. O histórico de vendas e movimentos foi preservado."); setProdutoExcluir(null);
-    } catch (error) { setErro(error.message); }
-    finally { setRemovendo(false); }
+      if (!response.ok)
+        throw new Error(data.erro || "Não foi possível excluir o produto.");
+      setProdutos((atuais) =>
+        atuais.filter((p) => Number(p.id) !== Number(produtoExcluir.id)),
+      );
+      setSucesso(
+        "Produto arquivado. O histórico de vendas e movimentos foi preservado.",
+      );
+      setProdutoExcluir(null);
+    } catch (error) {
+      setErro(error.message);
+    } finally {
+      setRemovendo(false);
+    }
   };
 
   const GetStatus = (quantidade, estoqueMinimo = 5) => {
@@ -70,20 +100,34 @@ function Productos() {
   };
 
   const restaurarProduto = async (produto) => {
-    setRemovendo(true); setErro(""); setSucesso("");
+    setRemovendo(true);
+    setErro("");
+    setSucesso("");
     try {
-      const response = await fetch(`${API_URL}/produtos/${produto.id}/restaurar`, { method: "PATCH" });
+      const response = await fetch(
+        `${API_URL}/produtos/${produto.id}/restaurar`,
+        { method: "PATCH" },
+      );
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.erro || "Não foi possível restaurar o produto.");
-      setProdutos((atuais) => atuais.filter((p) => Number(p.id) !== Number(produto.id)));
-      setSucesso("Produto restaurado e novamente disponível para vendas e movimentos.");
-    } catch (error) { setErro(error.message); }
-    finally { setRemovendo(false); }
+      if (!response.ok)
+        throw new Error(data.erro || "Não foi possível restaurar o produto.");
+      setProdutos((atuais) =>
+        atuais.filter((p) => Number(p.id) !== Number(produto.id)),
+      );
+      setSucesso(
+        "Produto restaurado e novamente disponível para vendas e movimentos.",
+      );
+    } catch (error) {
+      setErro(error.message);
+    } finally {
+      setRemovendo(false);
+    }
   };
 
   const formatarStock = (produto) => {
     const embalagem = produto.apresentacoes?.[0];
-    if (!embalagem) return `${produto.quantidade} ${produto.unidade_base || "Unidade"}(s)`;
+    if (!embalagem)
+      return `${produto.quantidade} ${produto.unidade_base || "Unidade"}(s)`;
     const fator = Number(embalagem.fator_conversao);
     const inteiras = Math.floor(Number(produto.quantidade) / fator);
     const soltas = Number(produto.quantidade) % fator;
@@ -92,11 +136,16 @@ function Productos() {
 
   const produtosFiltrados = produtos.filter((p) => {
     const termo = pesquisa.trim().toLocaleLowerCase("pt-MZ");
-    const correspondePesquisa = !termo
-      || p.nome.toLocaleLowerCase("pt-MZ").includes(termo)
-      || String(p.codigo_barras || "").toLocaleLowerCase("pt-MZ").includes(termo)
-      || (p.apresentacoes || []).some((apresentacao) =>
-        String(apresentacao.codigo_barras || "").toLocaleLowerCase("pt-MZ").includes(termo),
+    const correspondePesquisa =
+      !termo ||
+      p.nome.toLocaleLowerCase("pt-MZ").includes(termo) ||
+      String(p.codigo_barras || "")
+        .toLocaleLowerCase("pt-MZ")
+        .includes(termo) ||
+      (p.apresentacoes || []).some((apresentacao) =>
+        String(apresentacao.codigo_barras || "")
+          .toLocaleLowerCase("pt-MZ")
+          .includes(termo),
       );
 
     const correspondeCategoria =
@@ -111,21 +160,45 @@ function Productos() {
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Produtos</h1>
-          <p className="text-gray-600 mb-">
-            Gerencie os produtos do seu stock
-          </p>
+          <p className="text-gray-600 mb-">Gerencie os produtos do seu stock</p>
         </div>
 
         {podeGerir && (
-          <Link to="/adicionarProduto" className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700"><PackagePlus size={19}/>Adicionar produto</Link>
+          <Link
+            to="/adicionarProduto"
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700"
+          >
+            <PackagePlus size={19} />
+            Adicionar produto
+          </Link>
         )}
       </div>
-      <Feedback tipo="erro" className="mb-4" onClose={() => setErro("")}>{erro}</Feedback>
-      <Feedback tipo="sucesso" className="mb-4" onClose={() => setSucesso("")}>{sucesso}</Feedback>
+      <Feedback tipo="erro" className="mb-4" onClose={() => setErro("")}>
+        {erro}
+      </Feedback>
+      <Feedback tipo="sucesso" className="mb-4" onClose={() => setSucesso("")}>
+        {sucesso}
+      </Feedback>
 
-      <div className="mb-5 inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm" role="group" aria-label="Estado dos produtos">
-        <button type="button" onClick={() => setMostrarArquivados(false)} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${!mostrarArquivados ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Produtos ativos</button>
-        <button type="button" onClick={() => setMostrarArquivados(true)} className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${mostrarArquivados ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Arquivados</button>
+      <div
+        className="mb-5 inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+        role="group"
+        aria-label="Estado dos produtos"
+      >
+        <button
+          type="button"
+          onClick={() => setMostrarArquivados(false)}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${!mostrarArquivados ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+        >
+          Produtos ativos
+        </button>
+        <button
+          type="button"
+          onClick={() => setMostrarArquivados(true)}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${mostrarArquivados ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+        >
+          Arquivados
+        </button>
       </div>
 
       {/* Pesquisa */}
@@ -173,7 +246,9 @@ function Productos() {
         focus:ring-indigo-500
       "
           >
-            <option value="" className="text-gray-500">Todas as categorias</option>
+            <option value="" className="text-gray-500">
+              Todas as categorias
+            </option>
 
             {categorias.map((categoria) => (
               <option key={categoria.id} value={categoria.id}>
@@ -194,7 +269,7 @@ function Productos() {
                 <th className="min-w-56 px-6 py-3 text-left text-xs uppercase tracking-wider">
                   Produto
                 </th>
-                <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
+                <th className="px-6 py-3  text-xs text-left uppercase tracking-wider">
                   Categoria
                 </th>
                 <th className="px-6 py-3 text-center text-xs uppercase tracking-wider">
@@ -233,13 +308,23 @@ function Productos() {
                 );
 
                 return (
-                  <tr key={produto.id} className="transition-colors hover:bg-slate-50/70">
+                  <tr
+                    key={produto.id}
+                    className="transition-colors hover:bg-slate-50/70"
+                  >
                     <td className="min-w-56 max-w-80 px-6 py-4 text-left">
-                      <strong className="block break-words text-sm font-semibold leading-5 text-slate-900" title={produto.nome}>{produto.nome}</strong>
-                      <small className="mt-0.5 block text-slate-400">Código #{produto.id}</small>
+                      <strong
+                        className="block word-wrap text-sm font-semibold leading-5 text-slate-900"
+                        title={produto.nome}
+                      >
+                        {produto.nome}
+                      </strong>
+                      {/*<small className="mt-0.5 block text-slate-400">
+                        Código #{produto.id}
+                      </small>*/} 
                     </td>
 
-                    <td className="px-6 py-3">
+                    <td className="px-6 py-3 text-left">
                       {categoria ? categoria.nome : "Sem categoria"}
                     </td>
 
@@ -247,7 +332,14 @@ function Productos() {
                       {fornecedor ? fornecedor.nome : "Sem fornecedor"}
                     </td>
 
-                    <td className="px-6 py-3"><span>{formatarStock(produto)}</span>{produto.apresentacoes?.[0] && <small className="block text-slate-500">{produto.quantidade} unidades base</small>}</td>
+                    <td className="px-6 py-3">
+                      <span>{formatarStock(produto)}</span>
+                      {produto.apresentacoes?.[0] && (
+                        <small className="block text-slate-500">
+                          {produto.quantidade} unidades base
+                        </small>
+                      )}
+                    </td>
 
                     <td className="px-6 py-3">
                       <span
@@ -258,18 +350,44 @@ function Productos() {
                     </td>
                     {podeVerPrecoFornecedor && (
                       <td className="px-6 py-3 whitespace-nowrap">
-                        <strong className="font-semibold text-slate-800">{formatarMzn(produto.precoFornecedor)}</strong>
-                        <small className="block text-slate-500">por {produto.unidade_base || "unidade"}</small>
-                        {produto.apresentacoes?.[0] && <small className="mt-1 block font-medium text-amber-700">{formatarMzn(produto.apresentacoes[0].custo)} por {produto.apresentacoes[0].nome}</small>}
+                        <strong className="font-semibold text-slate-800">
+                          {formatarMzn(produto.precoFornecedor)}
+                        </strong>
+                        <small className="block text-slate-500">
+                          por {produto.unidade_base || "unidade"}
+                        </small>
+                        {produto.apresentacoes?.[0] && (
+                          <small className="mt-1 block font-medium text-amber-700">
+                            {formatarMzn(produto.apresentacoes[0].custo)} por{" "}
+                            {produto.apresentacoes[0].nome}
+                          </small>
+                        )}
                       </td>
                     )}
 
-                    <td className="px-6 py-3 whitespace-nowrap"><strong className="font-semibold text-slate-900">{formatarMzn(produto.preco)}</strong><small className="block text-slate-500">por {produto.unidade_base || "unidade"}</small>{Boolean(produto.apresentacoes?.[0]?.vendavel) && <small className="mt-1 block font-semibold text-indigo-600">{formatarMzn(produto.apresentacoes[0].preco)} por {produto.apresentacoes[0].nome}</small>}</td>
+                    <td className="px-6 py-3 whitespace-nowrap">
+                      <strong className="font-semibold text-slate-900">
+                        {formatarMzn(produto.preco)}
+                      </strong>
+                      <small className="block text-slate-500">
+                        por {produto.unidade_base || "unidade"}
+                      </small>
+                      {Boolean(produto.apresentacoes?.[0]?.vendavel) && (
+                        <small className="mt-1 block font-semibold text-indigo-600">
+                          {formatarMzn(produto.apresentacoes[0].preco)} por{" "}
+                          {produto.apresentacoes[0].nome}
+                        </small>
+                      )}
+                    </td>
 
                     <td className="px-6 py-3 text-center flex justify-center">
                       {podeGerir && !mostrarArquivados && (
                         <Link to={`/editarProduto/${produto.id}`}>
-                          <button type="button" aria-label={`Editar ${produto.nome}`} className="p-2 hover:bg-gray-100 rounded-lg transition">
+                          <button
+                            type="button"
+                            aria-label={`Editar ${produto.nome}`}
+                            className="p-2 hover:bg-gray-100 rounded-lg transition"
+                          >
                             <Edit2 className="w-4 h-4 text-gray-600" />
                           </button>
                         </Link>
@@ -285,7 +403,17 @@ function Productos() {
                           <Archive className="h-4 w-4 text-amber-700" />
                         </button>
                       )}
-                      {podeExcluir && mostrarArquivados && <button type="button" disabled={removendo} aria-label={`Restaurar ${produto.nome}`} onClick={() => restaurarProduto(produto)} className="rounded-lg p-2 text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"><ArchiveRestore className="h-4 w-4"/></button>}
+                      {podeExcluir && mostrarArquivados && (
+                        <button
+                          type="button"
+                          disabled={removendo}
+                          aria-label={`Restaurar ${produto.nome}`}
+                          onClick={() => restaurarProduto(produto)}
+                          className="rounded-lg p-2 text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+                        >
+                          <ArchiveRestore className="h-4 w-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -293,13 +421,49 @@ function Productos() {
             </tbody>
           </table>
 
-          {loading && <p className="py-8 text-center text-gray-500" role="status">A carregar produtos...</p>}
+          {loading && (
+            <p className="py-8 text-center text-gray-500" role="status">
+              A carregar produtos...
+            </p>
+          )}
           {!loading && !erro && produtosFiltrados.length === 0 && (
-            <div className="px-4 py-10 text-center">{mostrarArquivados ? <Archive className="mx-auto h-10 w-10 text-slate-300"/> : <PackagePlus className="mx-auto h-10 w-10 text-slate-300"/>}<p className="mt-3 font-semibold text-slate-700">{pesquisa || categoriaSelecionada ? "Nenhum produto corresponde aos filtros." : mostrarArquivados ? "Não existem produtos arquivados." : "Ainda não existem produtos."}</p>{podeGerir && !mostrarArquivados && !pesquisa && !categoriaSelecionada && <Link to="/adicionarProduto" className="mt-3 inline-flex font-semibold text-indigo-600 hover:underline">Adicionar o primeiro produto</Link>}</div>
+            <div className="px-4 py-10 text-center">
+              {mostrarArquivados ? (
+                <Archive className="mx-auto h-10 w-10 text-slate-300" />
+              ) : (
+                <PackagePlus className="mx-auto h-10 w-10 text-slate-300" />
+              )}
+              <p className="mt-3 font-semibold text-slate-700">
+                {pesquisa || categoriaSelecionada
+                  ? "Nenhum produto corresponde aos filtros."
+                  : mostrarArquivados
+                    ? "Não existem produtos arquivados."
+                    : "Ainda não existem produtos."}
+              </p>
+              {podeGerir &&
+                !mostrarArquivados &&
+                !pesquisa &&
+                !categoriaSelecionada && (
+                  <Link
+                    to="/adicionarProduto"
+                    className="mt-3 inline-flex font-semibold text-indigo-600 hover:underline"
+                  >
+                    Adicionar o primeiro produto
+                  </Link>
+                )}
+            </div>
           )}
         </div>
       </div>
-      <ConfirmDialog aberto={Boolean(produtoExcluir)} titulo="Arquivar produto?" descricao={`“${produtoExcluir?.nome || ""}” deixará de aparecer em vendas, stock atual e alertas. O histórico será preservado e poderá restaurar o produto depois.`} confirmarLabel="Arquivar produto" ocupada={removendo} onCancelar={() => !removendo && setProdutoExcluir(null)} onConfirmar={handleDelete}/>
+      <ConfirmDialog
+        aberto={Boolean(produtoExcluir)}
+        titulo="Arquivar produto?"
+        descricao={`“${produtoExcluir?.nome || ""}” deixará de aparecer em vendas, stock atual e alertas. O histórico será preservado e poderá restaurar o produto depois.`}
+        confirmarLabel="Arquivar produto"
+        ocupada={removendo}
+        onCancelar={() => !removendo && setProdutoExcluir(null)}
+        onConfirmar={handleDelete}
+      />
     </main>
   );
 }

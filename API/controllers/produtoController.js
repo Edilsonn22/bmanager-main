@@ -4,6 +4,9 @@ import { auditar } from "../services/auditoriaService.js";
 
 const empresaDoPedido = (req) => req.user?.empresa_id;
 const texto = (valor, limite = 255) => typeof valor === "string" ? valor.trim().slice(0, limite) : "";
+const camposProduto = `id, empresa_id, nome, idCategoria, precoFornecedor, preco,
+  idFornecedor, quantidade, estoque_minimo, tipo_produto, unidade_base,
+  codigo_barras, arquivado_em, (imagem IS NOT NULL) AS tem_imagem`;
 
 async function relacoesPertencemAEmpresa(empresaId, idCategoria, idFornecedor, connection = pool) {
   const [[categoria], [fornecedor]] = await Promise.all([
@@ -96,7 +99,7 @@ export const getAllProdutos = async (req, res) => {
     const empresaId = empresaDoPedido(req);
     const arquivados = req.query.estado === "arquivados";
     const [produtos] = await pool.query(
-      `SELECT * FROM Produto WHERE empresa_id=? AND arquivado_em IS ${arquivados ? "NOT NULL" : "NULL"} ORDER BY nome ASC`,
+      `SELECT ${camposProduto} FROM Produto WHERE empresa_id=? AND arquivado_em IS ${arquivados ? "NOT NULL" : "NULL"} ORDER BY nome ASC`,
       [empresaId],
     );
     return res.json({ sucesso: true, produtos: await carregarApresentacoes(produtos, empresaId) });
@@ -106,7 +109,7 @@ export const getAllProdutos = async (req, res) => {
 export const getProdutoById = async (req, res) => {
   try {
     const empresaId = empresaDoPedido(req);
-    const [produtos] = await pool.query("SELECT * FROM Produto WHERE id=? AND empresa_id=?", [req.params.id, empresaId]);
+    const [produtos] = await pool.query(`SELECT ${camposProduto} FROM Produto WHERE id=? AND empresa_id=?`, [req.params.id, empresaId]);
     if (!produtos.length) return res.status(404).json({ sucesso: false, erro: "Produto não encontrado." });
     const [produto] = await carregarApresentacoes(produtos, empresaId);
     return res.json({ sucesso: true, produto });
@@ -156,4 +159,49 @@ export const restoreProduto = async (req, res) => {
     await auditar({ empresaId, usuarioId: req.user.id, acao: "restaurar", entidade: "produto", entidadeId: req.params.id });
     return res.json({ sucesso: true, mensagem: "Produto restaurado e disponível para utilização." });
   } catch (error) { return res.status(500).json({ sucesso: false, erro: error.message }); }
+};
+
+export const getImagemProduto = async (req, res) => {
+  try {
+    const [produtos] = await pool.execute(
+      "SELECT imagem, imagem_mime FROM Produto WHERE id=? AND empresa_id=? AND imagem IS NOT NULL",
+      [req.params.id, empresaDoPedido(req)],
+    );
+    if (!produtos.length) return res.status(404).end();
+    res.set("Cache-Control", "private, max-age=3600");
+    res.type(produtos[0].imagem_mime || "image/webp");
+    return res.send(produtos[0].imagem);
+  } catch {
+    return res.status(500).json({ sucesso: false, erro: "Não foi possível carregar a imagem." });
+  }
+};
+
+export const updateImagemProduto = async (req, res) => {
+  const tiposPermitidos = new Set(["image/jpeg", "image/png", "image/webp"]);
+  if (!tiposPermitidos.has(req.headers["content-type"]) || !Buffer.isBuffer(req.body) || !req.body.length) {
+    return res.status(400).json({ sucesso: false, erro: "Envie uma imagem JPEG, PNG ou WebP válida." });
+  }
+  try {
+    const [resultado] = await pool.execute(
+      "UPDATE Produto SET imagem=?, imagem_mime=? WHERE id=? AND empresa_id=?",
+      [req.body, req.headers["content-type"], req.params.id, empresaDoPedido(req)],
+    );
+    if (!resultado.affectedRows) return res.status(404).json({ sucesso: false, erro: "Produto não encontrado." });
+    return res.json({ sucesso: true, mensagem: "Imagem atualizada com sucesso." });
+  } catch {
+    return res.status(500).json({ sucesso: false, erro: "Não foi possível guardar a imagem." });
+  }
+};
+
+export const deleteImagemProduto = async (req, res) => {
+  try {
+    const [resultado] = await pool.execute(
+      "UPDATE Produto SET imagem=NULL, imagem_mime=NULL WHERE id=? AND empresa_id=?",
+      [req.params.id, empresaDoPedido(req)],
+    );
+    if (!resultado.affectedRows) return res.status(404).json({ sucesso: false, erro: "Produto não encontrado." });
+    return res.json({ sucesso: true });
+  } catch {
+    return res.status(500).json({ sucesso: false, erro: "Não foi possível remover a imagem." });
+  }
 };

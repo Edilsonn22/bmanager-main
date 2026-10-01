@@ -251,15 +251,38 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
       pool.execute("INSERT INTO Categoria (empresa_id, nome, descr) VALUES (?, ?, ?)", [empresaB.empresaId, "Categoria B", "Teste"]),
       pool.execute("INSERT INTO Fornecedor (empresa_id, nome) VALUES (?, ?)", [empresaB.empresaId, "Fornecedor B"]),
     ]);
-    await pool.execute(
+    const [produtoEmpresaB] = await pool.execute(
       "INSERT INTO Produto (empresa_id, nome, idCategoria, precoFornecedor, preco, idFornecedor, quantidade) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [empresaB.empresaId, "Produto exclusivo B", categoria.insertId, 10, 20, fornecedor.insertId, 3],
     );
 
     const tokenA = await iniciarSessao(empresaA);
+    const tokenB = await iniciarSessao(empresaB);
+    const caixaEmpresaB = await resposta("/api/caixa/abrir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenB}` },
+      body: JSON.stringify({ valor_abertura: 75 }),
+    });
+    assert.equal(caixaEmpresaB.status, 201);
+    const movimentoEmpresaB = await resposta("/api/movimentos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenB}` },
+      body: JSON.stringify({ id_Produto: produtoEmpresaB.insertId, tipo: "entrada", quantidade: 2 }),
+    });
+    assert.equal(movimentoEmpresaB.status, 201);
     const result = await resposta("/api/produtos", { headers: { Authorization: `Bearer ${tokenA}` } });
     assert.equal(result.status, 200);
     assert.equal(result.body.produtos.some((produto) => produto.nome === "Produto exclusivo B"), false);
+    const resumoEmpresaA = await resposta("/api/financeiro/resumo", { headers: { Authorization: `Bearer ${tokenA}` } });
+    assert.equal(resumoEmpresaA.status, 200);
+    assert.equal(resumoEmpresaA.body.produtos.some((produto) => produto.nome === "Produto exclusivo B"), false);
+    assert.equal(resumoEmpresaA.body.movimentos.some((movimento) => Number(movimento.id) === Number(movimentoEmpresaB.body.id)), false);
+    const resumoEmpresaB = await resposta("/api/financeiro/resumo", { headers: { Authorization: `Bearer ${tokenB}` } });
+    assert.equal(resumoEmpresaB.body.movimentos.some((movimento) => Number(movimento.id) === Number(movimentoEmpresaB.body.id)), true);
+    const relatoriosCaixaA = await resposta("/api/caixa/relatorios", { headers: { Authorization: `Bearer ${tokenA}` } });
+    assert.equal(relatoriosCaixaA.body.operacoes.some((operacao) => Number(operacao.id) === Number(caixaEmpresaB.body.id)), false);
+    const relatoriosCaixaB = await resposta("/api/caixa/relatorios", { headers: { Authorization: `Bearer ${tokenB}` } });
+    assert.equal(relatoriosCaixaB.body.operacoes.some((operacao) => Number(operacao.id) === Number(caixaEmpresaB.body.id)), true);
   });
 
   test("relatório preserva os preços praticados antes da alteração do produto", async () => {
@@ -296,30 +319,86 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
     assert.equal(vendaCriada.status, 201);
 
     await pool.execute(
-      "UPDATE Produto SET precoFornecedor = 80, preco = 250 WHERE id = ?",
+      "UPDATE Produto SET precoFornecedor = 80, preco = 250, arquivado_em = CURRENT_TIMESTAMP WHERE id = ?",
       [produto.insertId],
     );
     const resumo = await resposta("/api/financeiro/resumo", {
       headers: { Authorization: `Bearer ${token}` },
     });
     assert.equal(resumo.status, 200);
+    assert.equal(resumo.body.produtos.some((item) => Number(item.id) === Number(produto.insertId)), false);
     const venda = resumo.body.movimentos.find((item) => Number(item.venda_id) === Number(vendaCriada.body.venda.id));
     assert.equal(Number(venda.preco_unitario), 100);
     assert.equal(Number(venda.custo_unitario), 40);
+  });
+
+  test("valores financeiros preservam o total exato de embalagens convertidas", async () => {
+    const empresa = await criarEmpresaComAdmin("Empresa Embalagens", "embalagens@teste.local");
+    const token = await iniciarSessao(empresa);
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    const caixa = await resposta("/api/caixa/abrir", { method: "POST", headers, body: JSON.stringify({ valor_abertura: 0 }) });
+    assert.equal(caixa.status, 201);
+    const [categoria] = await pool.execute("INSERT INTO Categoria (empresa_id,nome,descr) VALUES (?,?,'Teste')", [empresa.empresaId, "Embalagens"]);
+    const [fornecedor] = await pool.execute("INSERT INTO Fornecedor (empresa_id,nome) VALUES (?,?)", [empresa.empresaId, "Fornecedor Embalagens"]);
+    const [produto] = await pool.execute(
+      "INSERT INTO Produto (empresa_id,nome,idCategoria,precoFornecedor,preco,idFornecedor,quantidade) VALUES (?,?,?,?,?,?,?)",
+      [empresa.empresaId, "Produto Caixa 12", categoria.insertId, 350, 400, fornecedor.insertId, 24],
+    );
+    const [apresentacao] = await pool.execute(
+      "INSERT INTO ProdutoApresentacao (produto_id,nome,fator_conversao,preco,custo,vendavel) VALUES (?,?,?,?,?,TRUE)",
+      [produto.insertId, "Caixa", 12, 400, 350],
+    );
+    const venda = await resposta("/api/vendas", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ itens: [{ produto_id: produto.insertId, apresentacao_id: apresentacao.insertId, quantidade: 1 }], forma_pagamento: "dinheiro", valor_recebido: 400 }),
+    });
+    assert.equal(venda.status, 201);
+    const resumoVenda = await resposta("/api/financeiro/resumo", { headers });
+    const movimentoVenda = resumoVenda.body.movimentos.find((movimento) => Number(movimento.venda_id) === Number(venda.body.venda.id) && movimento.origem === "venda");
+    assert.equal(Number(movimentoVenda.valor_total), 400);
+    assert.equal(Number(movimentoVenda.custo_total), 350);
+
+    const detalhe = await resposta(`/api/vendas/${venda.body.venda.id}`, { headers });
+    const devolucao = await resposta(`/api/vendas/${venda.body.venda.id}/itens/${detalhe.body.venda.itens[0].id}/devolver`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ quantidade: 1 }),
+    });
+    assert.equal(devolucao.status, 200);
+    const resumoDevolvido = await resposta("/api/financeiro/resumo", { headers });
+    const movimentoDevolucao = resumoDevolvido.body.movimentos.find((movimento) => Number(movimento.venda_id) === Number(venda.body.venda.id) && movimento.origem === "devolucao");
+    assert.equal(Number(movimentoDevolucao.valor_total), 400);
+    assert.equal(Number(movimentoDevolucao.custo_total), 350);
+    assert.equal(Number(movimentoVenda.valor_total) - Number(movimentoDevolucao.valor_total), 0);
   });
 
   test("fluxo comercial integra cliente, caixa, venda, devolução, stock e financeiro", async () => {
     const empresa = await criarEmpresaComAdmin("Empresa Vendas", "vendas@teste.local");
     const token = await iniciarSessao(empresa);
     const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    const respostaJsonInvalido = await fetch(`${baseUrl}/api/vendas`, {
+      method: "POST",
+      headers,
+      body: "{",
+    });
+    assert.equal(respostaJsonInvalido.status, 400);
+    const erroJsonInvalido = await respostaJsonInvalido.json();
+    assert.equal(erroJsonInvalido.erro, "O JSON enviado não é válido.");
+    assert.equal(erroJsonInvalido.message, erroJsonInvalido.erro);
     const [categoria] = await pool.execute("INSERT INTO Categoria (empresa_id,nome,descr) VALUES (?,?,'Teste')", [empresa.empresaId, "Vendas"]);
     const [fornecedor] = await pool.execute("INSERT INTO Fornecedor (empresa_id,nome) VALUES (?,?)", [empresa.empresaId, "Fornecedor"]);
     const [produto] = await pool.execute("INSERT INTO Produto (empresa_id,nome,idCategoria,precoFornecedor,preco,idFornecedor,quantidade,codigo_barras) VALUES (?,?,?,?,?,?,?,?)", [empresa.empresaId, "Produto vendido", categoria.insertId, 40, 100, fornecedor.insertId, 10, "789123"]);
 
-    const cliente = await resposta("/api/clientes", { method: "POST", headers, body: JSON.stringify({ nome: "Cliente Teste", nuit: "123" }) });
+    const cliente = await resposta("/api/clientes", { method: "POST", headers, body: JSON.stringify({ nome: "Cliente Teste", nuit: "123456789" }) });
     assert.equal(cliente.status, 201);
     const caixa = await resposta("/api/caixa/abrir", { method: "POST", headers, body: JSON.stringify({ valor_abertura: 500 }) });
     assert.equal(caixa.status, 201);
+    const relatoriosAbertura = await resposta("/api/caixa/relatorios", { headers });
+    const aberturaPersistida = relatoriosAbertura.body.operacoes.find((item) => Number(item.id) === Number(caixa.body.id));
+    assert.equal(aberturaPersistida.codigo_abertura, `CA-${new Date(aberturaPersistida.aberto_em).getFullYear()}-${String(caixa.body.id).padStart(6, "0")}`);
+    assert.equal(Number(aberturaPersistida.valor_abertura), 500);
+    assert.equal(aberturaPersistida.estado, "aberto");
     const venda = await resposta("/api/vendas", { method: "POST", headers, body: JSON.stringify({ itens: [{ produto_id: produto.insertId, quantidade: 3 }], cliente_id: cliente.body.cliente.id, desconto: 10, forma_pagamento: "dinheiro", valor_recebido: 300 }) });
     assert.equal(venda.status, 201);
     assert.equal(Number(venda.body.venda.total), 290);
@@ -329,20 +408,184 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
 
     const detalhe = await resposta(`/api/vendas/${venda.body.venda.id}`, { headers });
     assert.equal(detalhe.status, 200);
+    for (const quantidade of [0, -1, 1.5, 4]) {
+      const invalida = await resposta(`/api/vendas/${venda.body.venda.id}/itens/${detalhe.body.venda.itens[0].id}/devolver`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ quantidade }),
+      });
+      assert.ok([400, 409].includes(invalida.status));
+      assert.ok(invalida.body.erro);
+    }
     const devolucao = await resposta(`/api/vendas/${venda.body.venda.id}/itens/${detalhe.body.venda.itens[0].id}/devolver`, { method: "POST", headers, body: JSON.stringify({ quantidade: 1 }) });
     assert.equal(devolucao.status, 200);
     const [[stockAposDevolucao]] = await pool.execute("SELECT quantidade FROM Produto WHERE id=?", [produto.insertId]);
     assert.equal(stockAposDevolucao.quantidade, 8);
     const resumo = await resposta("/api/financeiro/resumo", { headers });
-    const movimento = resumo.body.movimentos.find((item) => Number(item.venda_id) === Number(venda.body.venda.id));
-    assert.equal(Number(movimento.quantidade), 2);
+    const movimentosDaVenda = resumo.body.movimentos.filter((item) => Number(item.venda_id) === Number(venda.body.venda.id));
+    assert.equal(Number(movimentosDaVenda.find((item) => item.origem === "venda").quantidade), 3);
+    assert.equal(Number(movimentosDaVenda.find((item) => item.origem === "devolucao").quantidade), 1);
+    const historicoVendas = await resposta("/api/vendas", { headers });
+    const vendaHistorica = historicoVendas.body.vendas.find((item) => Number(item.id) === Number(venda.body.venda.id));
+    assert.match(vendaHistorica.codigo, /^VEN-\d{4}-\d{6}$/);
+    assert.equal(Number(vendaHistorica.valor_devolvido), 96.67);
+    assert.equal(Number(vendaHistorica.total_liquido), 193.33);
+    const detalheComCodigo = await resposta(`/api/vendas/${venda.body.venda.id}`, { headers });
+    assert.equal(detalheComCodigo.body.venda.codigo, vendaHistorica.codigo);
 
-    const segundaVenda = await resposta("/api/vendas", { method: "POST", headers, body: JSON.stringify({ itens: [{ produto_id: produto.insertId, quantidade: 2 }], forma_pagamento: "mpesa" }) });
+    const devolucaoFinal = await resposta(`/api/vendas/${venda.body.venda.id}/itens/${detalhe.body.venda.itens[0].id}/devolver`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ quantidade: 2 }),
+    });
+    assert.equal(devolucaoFinal.status, 200);
+    const vendaTotalmenteDevolvida = await resposta(`/api/vendas/${venda.body.venda.id}`, { headers });
+    assert.equal(vendaTotalmenteDevolvida.body.venda.estado, "devolvida");
+    const historicoTotalmenteDevolvido = await resposta("/api/vendas", { headers });
+    const totalLiquidoDevolvido = historicoTotalmenteDevolvido.body.vendas.find((item) => Number(item.id) === Number(venda.body.venda.id));
+    assert.equal(Number(totalLiquidoDevolvido.total_liquido), 0);
+
+    const entradaManual = await resposta("/api/movimentos", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ id_Produto: produto.insertId, tipo: "entrada", quantidade: 2, motivo: "Compra de stock" }),
+    });
+    assert.equal(entradaManual.status, 201);
+    const resumoComEntradaManual = await resposta("/api/financeiro/resumo", { headers });
+    const movimentoManual = resumoComEntradaManual.body.movimentos.find((item) => Number(item.id) === Number(entradaManual.body.id));
+    assert.equal(movimentoManual.origem, "manual");
+    assert.equal(Number(movimentoManual.quantidade), 2);
+    assert.equal(Number(movimentoManual.custo_unitario), 40);
+
+    const segundaVenda = await resposta("/api/vendas", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        itens: [{ produto_id: produto.insertId, quantidade: 2 }],
+        pagamentos: [
+          { forma: "dinheiro", valor: 80, valor_recebido: 80 },
+          { forma: "mpesa", valor: 120 },
+        ],
+      }),
+    });
     assert.equal(segundaVenda.status, 201);
+    const detalhePagamentoMisto = await resposta(`/api/vendas/${segundaVenda.body.venda.id}`, { headers });
+    assert.equal(detalhePagamentoMisto.status, 200);
+    assert.deepEqual(
+      detalhePagamentoMisto.body.venda.pagamentos.map((pagamento) => [pagamento.forma, Number(pagamento.valor)]),
+      [["dinheiro", 80], ["mpesa", 120]],
+    );
     const cancelamento = await resposta(`/api/vendas/${segundaVenda.body.venda.id}/cancelar`, { method: "POST", headers });
     assert.equal(cancelamento.status, 200);
     const [[stockFinal]] = await pool.execute("SELECT quantidade FROM Produto WHERE id=?", [produto.insertId]);
-    assert.equal(stockFinal.quantidade, 8);
+    assert.equal(stockFinal.quantidade, 12);
+
+    const fecho = await resposta(`/api/caixa/${caixa.body.id}/fechar`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ valor_fecho: 790, valores_conferidos: { dinheiro: 790, mpesa: 0 } }),
+    });
+    assert.equal(fecho.status, 200);
+    assert.equal(Number(fecho.body.fecho.esperado), 790);
+    assert.equal(Number(fecho.body.fecho.diferenca), 0);
+    assert.equal(fecho.body.relatorio.vendas.quantidade, 1);
+    assert.equal(fecho.body.relatorio.vendas.canceladas, 1);
+    assert.equal(fecho.body.relatorio.vendas.artigos, 3);
+    assert.equal(fecho.body.relatorio.vendas.devolvidos, 3);
+    const relatorio = await resposta(`/api/caixa/${caixa.body.id}/relatorio`, { headers });
+    assert.equal(relatorio.status, 200);
+    assert.equal(relatorio.body.relatorio.codigo, fecho.body.relatorio.codigo);
+    const operacoes = await resposta("/api/caixa/relatorios", { headers });
+    const operacaoFechada = operacoes.body.operacoes.find((item) => Number(item.id) === Number(caixa.body.id));
+    assert.equal(operacaoFechada.estado, "fechado");
+    assert.equal(operacaoFechada.codigo_fecho, fecho.body.relatorio.codigo);
+    assert.equal(operacaoFechada.resumo_fecho.vendas.total, fecho.body.relatorio.vendas.total);
+    assert.equal(Number(fecho.body.relatorio.vendas.devolucoes), 290);
+    assert.equal(Number(fecho.body.relatorio.vendas.total), 0);
+  });
+
+  test("venda offline em conflito fica para revisão e é reprocessada sem duplicação", async () => {
+    const empresa = await criarEmpresaComAdmin("Empresa Venda Offline", "offline@teste.local");
+    const token = await iniciarSessao(empresa);
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    const caixa = await resposta("/api/caixa/abrir", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ valor_abertura: 100 }),
+    });
+    assert.equal(caixa.status, 201);
+    const [categoria] = await pool.execute(
+      "INSERT INTO Categoria (empresa_id,nome,descr) VALUES (?,?,'Teste')",
+      [empresa.empresaId, "Offline"],
+    );
+    const [fornecedor] = await pool.execute(
+      "INSERT INTO Fornecedor (empresa_id,nome) VALUES (?,?)",
+      [empresa.empresaId, "Fornecedor Offline"],
+    );
+    const [produto] = await pool.execute(
+      "INSERT INTO Produto (empresa_id,nome,idCategoria,precoFornecedor,preco,idFornecedor,quantidade) VALUES (?,?,?,?,?,?,?)",
+      [empresa.empresaId, "Produto Offline", categoria.insertId, 50, 100, fornecedor.insertId, 2],
+    );
+    const idempotenciaId = crypto.randomUUID();
+    const vendaOffline = {
+      idempotencia_id: idempotenciaId,
+      venda_offline: true,
+      itens: [{ produto_id: produto.insertId, quantidade: 3, preco_esperado: 100 }],
+      desconto: 0,
+      pagamentos: [{ forma: "dinheiro", valor: 300, valor_recebido: 300 }],
+    };
+    const vendaMpesaOffline = await resposta("/api/vendas", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        ...vendaOffline,
+        idempotencia_id: crypto.randomUUID(),
+        itens: [{ produto_id: produto.insertId, quantidade: 1, preco_esperado: 100 }],
+        pagamentos: [{ forma: "mpesa", valor: 100 }],
+      }),
+    });
+    assert.equal(vendaMpesaOffline.status, 201);
+    const [[pagamentoOffline]] = await pool.execute(
+      "SELECT forma FROM PagamentoVenda WHERE venda_id=?",
+      [vendaMpesaOffline.body.venda.id],
+    );
+    assert.equal(pagamentoOffline.forma, "mpesa");
+
+    const conflito = await resposta("/api/vendas", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(vendaOffline),
+    });
+    assert.equal(conflito.status, 202);
+    assert.equal(conflito.body.requer_revisao, true);
+
+    const listaPendentes = await resposta("/api/vendas/offline-pendentes", { headers });
+    assert.equal(listaPendentes.status, 200);
+    const pendente = listaPendentes.body.pendentes.find(
+      (item) => item.idempotencia_id === idempotenciaId,
+    );
+    assert.ok(pendente);
+
+    await pool.execute("UPDATE Produto SET quantidade=5 WHERE id=?", [produto.insertId]);
+    const reprocessada = await resposta(
+      `/api/vendas/offline-pendentes/${pendente.id}/reprocessar`,
+      { method: "POST", headers },
+    );
+    assert.equal(reprocessada.status, 201);
+    assert.equal(reprocessada.body.venda.total, 300);
+
+    const repetida = await resposta("/api/vendas", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(vendaOffline),
+    });
+    assert.equal(repetida.status, 200);
+    assert.equal(repetida.body.duplicada, true);
+    const [[contagem]] = await pool.execute(
+      "SELECT COUNT(*) quantidade FROM Venda WHERE empresa_id=? AND idempotencia_id=?",
+      [empresa.empresaId, idempotenciaId],
+    );
+    assert.equal(contagem.quantidade, 1);
   });
 
   test("venda exige caixa aberto e preserva o nome do cliente avulso", async () => {
@@ -406,7 +649,7 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
   test("downgrade e cancelamento preservam o período contratado", async () => {
     const empresa = await criarEmpresaComAdmin("Empresa Comercial", "comercial@teste.local");
     await pool.execute(
-      "UPDATE assinaturas SET plano_id = 2, expira_em = DATE_ADD(NOW(), INTERVAL 1 MONTH) WHERE empresa_id = ?",
+      "UPDATE assinaturas SET plano_id = 3, expira_em = DATE_ADD(NOW(), INTERVAL 1 MONTH) WHERE empresa_id = ?",
       [empresa.empresaId],
     );
     const token = await iniciarSessao(empresa);
@@ -414,7 +657,7 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
     const downgrade = await resposta("/api/assinaturas/downgrade", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ planoId: 1 }),
+      body: JSON.stringify({ planoId: 2 }),
     });
     assert.equal(downgrade.status, 200);
 
@@ -429,7 +672,7 @@ describe("API: autenticação, isolamento e pagamentos", { skip: !executar }, ()
       [empresa.empresaId],
     );
     assert.equal(assinaturas[0].estado, "ativa");
-    assert.equal(assinaturas[0].plano_pendente_id, 1);
+    assert.equal(assinaturas[0].plano_pendente_id, 2);
     assert.ok(assinaturas[0].cancelamento_agendado_em);
 
     const reativacao = await resposta("/api/assinaturas/reativar", {

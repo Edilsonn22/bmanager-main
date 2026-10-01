@@ -8,7 +8,7 @@ const passosGestao = [
   { icon: BarChart3, titulo: "Conheça o seu painel", texto: "Aqui encontra vendas, valor do stock e alertas importantes da operação.", detalhe: "Use estes indicadores para perceber rapidamente o que precisa da sua atenção.", destino: "/painel", acao: "Abrir painel" },
   { icon: Tags, titulo: "Organize as categorias", texto: "Crie categorias antes de registar os produtos da empresa.", detalhe: "Uma estrutura simples, como Bebidas, Mercearia ou Informática, facilita pesquisas e relatórios.", destino: "/adicionarCategoria", acao: "Criar categoria" },
   { icon: Truck, titulo: "Registe os fornecedores", texto: "Guarde os fornecedores e os respetivos contactos num único lugar.", detalhe: "Depois poderá associar cada produto ao fornecedor correto.", destino: "/adicionarFornecedor", acao: "Registar fornecedor" },
-  { icon: PackagePlus, titulo: "Adicione o primeiro produto", texto: "Informe preços, quantidade inicial e o nível mínimo de stock.", detalhe: "O Vendai passa a controlar automaticamente as entradas, saídas e alertas desse produto.", destino: "/adicionarProduto", acao: "Adicionar produto" },
+  { icon: PackagePlus, titulo: "Adicione o primeiro produto", texto: "Informe preços, quantidade inicial e o nível mínimo de stock.", detalhe: "O Vendaí passa a controlar automaticamente as entradas, saídas e alertas desse produto.", destino: "/adicionarProduto", acao: "Adicionar produto" },
 ];
 
 const passosOperador = [
@@ -60,7 +60,7 @@ export default function Onboarding() {
   return <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/55 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
     <div ref={dialogRef} tabIndex={-1} className="relative grid max-h-[92dvh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl outline-none md:grid-cols-[220px_minmax(0,1fr)]">
       <aside className="hidden bg-slate-950 p-6 text-white md:flex md:flex-col">
-        <img src={vendaiLogo} alt="Vendai" className="h-8 w-auto max-w-28 object-contain" />
+        <img src={vendaiLogo} alt="Vendaí" className="h-8 w-auto max-w-28 object-contain" />
         <p className="mt-8 text-xs font-semibold uppercase tracking-wider text-slate-400">Configuração inicial</p>
         <ol className="mt-4 space-y-2">{passos.map((item, indice) => {
           const Icone = item.icon; const ativo = indice === passo; const concluido = indice < passo;

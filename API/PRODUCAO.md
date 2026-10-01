@@ -12,6 +12,13 @@ mysqldump -u $env:DB_USER -p$env:DB_PASSWORD $env:DB_NAME > backup-$(Get-Date -F
 5. Integre um serviço de e-mail antes de produção. Em desenvolvimento, o token de recuperação aparece apenas no log da API; em produção não é entregue por log.
 6. Antes do lançamento, valide: acesso sem JWT (401), acesso de outro utilizador/empresa (403/404), assinatura expirada (402), limites do plano (403), webhook sem assinatura (401) e recuperação de senha expirada (400).
 
+## Vendas offline
+
+- O uso offline exige HTTPS (exceto localhost), uma sessão ainda válida e que a página de nova venda tenha carregado os produtos, clientes, categorias e estado do caixa enquanto havia ligação.
+- Vendas offline aceitam qualquer método de pagamento e ficam guardadas no IndexedDB até a API confirmar a sincronização. O sistema regista o método escolhido, mas não confirma pagamentos externos (M-Pesa, e-Mola ou cartão) sem ligação; valide-os diretamente no respetivo serviço. Não limpe os dados do navegador enquanto houver vendas pendentes.
+- Divergências de stock, preço ou estado do caixa ficam para revisão de um administrador/gestor na página de vendas; confirme os dados antes de reprocessar.
+- Atualize o banco com `npm run migrate` antes de publicar a API que suporta a fila offline.
+
 ## Atualizações do banco
 
 - Instalação nova: importe `bmanager.sql` e execute uma vez `npm run migrate:baseline`.

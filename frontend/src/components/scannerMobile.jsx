@@ -14,6 +14,7 @@ export default function ScannerMobile() {
   const ultimo = useRef({ codigo: "", instante: 0 });
   const enviando = useRef(false);
   const enviarCodigoRef = useRef(null);
+  const audioContextRef = useRef(null);
   const [estado, setEstado] = useState("A iniciar a câmara...");
   const [erro, setErro] = useState("");
   const [enviados, setEnviados] = useState(0);
@@ -22,6 +23,43 @@ export default function ScannerMobile() {
   const [instalado, setInstalado] = useState(
     () => window.matchMedia?.("(display-mode: standalone)").matches || false,
   );
+
+  const emitirSomLeitura = () => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const contexto = audioContextRef.current || new AudioContext();
+      audioContextRef.current = contexto;
+      if (contexto.state === "suspended") contexto.resume().catch(() => {});
+
+      const oscilador = contexto.createOscillator();
+      const ganho = contexto.createGain();
+      const agora = contexto.currentTime;
+      oscilador.type = "sine";
+      oscilador.frequency.setValueAtTime(1050, agora);
+      ganho.gain.setValueAtTime(0.0001, agora);
+      ganho.gain.exponentialRampToValueAtTime(0.18, agora + 0.01);
+      ganho.gain.exponentialRampToValueAtTime(0.0001, agora + 0.11);
+      oscilador.connect(ganho);
+      ganho.connect(contexto.destination);
+      oscilador.start(agora);
+      oscilador.stop(agora + 0.12);
+    } catch {
+      // A vibração e a confirmação visual continuam disponíveis sem áudio.
+    }
+  };
+
+  useEffect(() => {
+    const desbloquearAudio = () => {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const contexto = audioContextRef.current || new AudioContext();
+      audioContextRef.current = contexto;
+      contexto.resume().catch(() => {});
+    };
+    window.addEventListener("pointerdown", desbloquearAudio, { once: true });
+    return () => window.removeEventListener("pointerdown", desbloquearAudio);
+  }, []);
 
   useEffect(() => {
     if (tokenRota) {
@@ -89,6 +127,7 @@ export default function ScannerMobile() {
           }
           throw new Error(dados.erro || "Não foi possível enviar o código.");
         }
+        emitirSomLeitura();
         navigator.vibrate?.(120);
         if (ativo) {
           setEnviados((numero) => numero + 1);
@@ -255,12 +294,12 @@ export default function ScannerMobile() {
       <main className="grid min-h-dvh place-items-center bg-slate-950 p-5 text-white">
         <section className="w-full max-w-sm rounded-3xl border border-white/10 bg-slate-900 p-7 text-center shadow-2xl">
           <div className="mx-auto mb-5 rounded-xl bg-white px-3 py-2">
-            <img src={vendaiLogo} alt="Vendai" className="mx-auto h-10 w-auto max-w-36 object-contain" />
+            <img src={vendaiLogo} alt="Vendaí" className="mx-auto h-10 w-auto max-w-36 object-contain" />
           </div>
           <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-indigo-500/15 text-indigo-300">
             <Smartphone size={31} />
           </span>
-          <h1 className="mt-5 text-xl font-bold">Vendai Scanner</h1>
+          <h1 className="mt-5 text-xl font-bold">Vendaí Scanner</h1>
           <p className="mt-2 text-sm leading-6 text-slate-400">
             Este aparelho ainda não está ligado. No computador, abra uma nova venda, selecione Telemóvel e leia o QR Code uma única vez.
           </p>
@@ -274,10 +313,10 @@ export default function ScannerMobile() {
       <section className="mx-auto max-w-lg overflow-hidden rounded-2xl bg-slate-900 shadow-2xl">
         <header className="p-5 text-center">
           <div className="mx-auto mb-4 w-fit rounded-xl bg-white px-3 py-2">
-            <img src={vendaiLogo} alt="Vendai" className="h-9 w-auto max-w-32 object-contain" />
+            <img src={vendaiLogo} alt="Vendaí" className="h-9 w-auto max-w-32 object-contain" />
           </div>
           <Camera className="mx-auto text-emerald-400" />
-          <h1 className="mt-2 text-xl font-bold">Scanner Vendai</h1>
+          <h1 className="mt-2 text-xl font-bold">Scanner Vendaí</h1>
           <p className="text-sm text-slate-400">Os produtos serão enviados para o computador.</p>
           {!instalado && eventoInstalacao && (
             <button

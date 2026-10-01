@@ -65,10 +65,14 @@ export function createApp() {
   app.use("/api/scanner", scannerRoutes);
 
   app.use((error, _req, res, _next) => {
-    console.error("Erro não tratado na API:", error);
-    res.status(500).json({
-      message: "Ocorreu um erro interno ao processar a solicitação.",
-    });
+    const erro = error.type === "entity.parse.failed"
+      ? "O JSON enviado não é válido."
+      : error.status === 413
+        ? "A solicitação excede o tamanho permitido."
+        : "Ocorreu um erro interno ao processar a solicitação.";
+    const status = error.type === "entity.parse.failed" ? 400 : error.status === 413 ? 413 : 500;
+    if (status === 500) console.error("Erro não tratado na API:", error);
+    res.status(status).json({ sucesso: false, erro, message: erro });
   });
 
   return app;

@@ -42,7 +42,7 @@ function Dashboard() {
     },
 
     {
-      label: "Valor do stock",
+      label: "Valor de custo do stock",
       value: "0 Mzn",
       icon: DollarSign,
       color: "text-green-500",
@@ -50,7 +50,7 @@ function Dashboard() {
     },
 
     {
-      label: "Entradas",
+      label: "Entradas brutas",
       value: "0 Unidades",
       icon: TrendingUp,
       color: "text-emerald-500",
@@ -58,7 +58,7 @@ function Dashboard() {
     },
 
     {
-      label: "Saídas",
+      label: "Saídas brutas",
       value: "0 Unidades",
       icon: TrendingDown,
       color: "text-orange-500",
@@ -146,9 +146,7 @@ function Dashboard() {
           throw new Error("Sessão expirada. Faça login novamente.");
         }
 
-        const produtosData = await produtosResponse
-          .json()
-          .catch(() => ({}));
+        const produtosData = await produtosResponse.json().catch(() => ({}));
 
         // -----------------------------------------------
         // ERRO API
@@ -207,7 +205,8 @@ function Dashboard() {
         // =================================================
 
         const valorEstoque = produtos.reduce(
-          (acc, p) => acc + Number(p.preco || 0) * Number(p.quantidade || 0),
+          (acc, p) =>
+            acc + Number(p.precoFornecedor || 0) * Number(p.quantidade || 0),
           0,
         );
 
@@ -255,9 +254,30 @@ function Dashboard() {
         // TOTAL DE SAÍDAS
         // =================================================
 
-        const totalSaidas = movimentos
-          .filter((m) => m.tipo === "saida")
-          .reduce((total, m) => total + Number(m.quantidade || 0), 0);
+        const saidasPorVendaProduto = new Map();
+        movimentos.forEach((movimento) => {
+          if (!movimento.venda_id) return;
+          const chave = `${movimento.venda_id}:${movimento.produtoId}`;
+          const quantidades = saidasPorVendaProduto.get(chave) || {
+            vendida: 0,
+            reposta: 0,
+          };
+          const quantidade = Number(movimento.quantidade || 0);
+          if (movimento.origem === "venda" && movimento.tipo === "saida") {
+            quantidades.vendida += quantidade;
+          } else if (
+            ["devolucao", "cancelamento"].includes(movimento.origem) &&
+            movimento.tipo === "entrada"
+          ) {
+            quantidades.reposta += quantidade;
+          }
+          saidasPorVendaProduto.set(chave, quantidades);
+        });
+        const totalSaidas = [...saidasPorVendaProduto.values()].reduce(
+          (total, quantidades) =>
+            total + Math.max(0, quantidades.vendida - quantidades.reposta),
+          0,
+        );
 
         // =================================================
         // ATUALIZAR ESTATÍSTICAS
@@ -273,7 +293,7 @@ function Dashboard() {
           },
 
           {
-            label: "Valor do stock",
+            label: "Valor de custo do stock",
             value: formatarMzn(valorEstoque),
             icon: DollarSign,
             color: "text-green-500",
@@ -281,7 +301,7 @@ function Dashboard() {
           },
 
           {
-            label: "Entradas",
+            label: "Entradas brutas",
             value: `${totalEntradas} Unidades`,
             icon: TrendingUp,
             color: "text-emerald-500",
@@ -289,7 +309,7 @@ function Dashboard() {
           },
 
           {
-            label: "Saídas",
+            label: "Saídas efetivas",
             value: `${totalSaidas} Unidades`,
             icon: TrendingDown,
             color: "text-orange-500",
@@ -306,9 +326,7 @@ function Dashboard() {
 
           name: m.nomeProduto || m.produto_nome || `Produto #${m.id_Produto}`,
 
-          action: `${
-            m.tipo === "entrada" ? "Entrada" : "Saída"
-          }: ${m.quantidade}`,
+          action: `${m.origem === "devolucao" ? "Devolução" : m.origem === "cancelamento" ? "Cancelamento" : m.tipo === "entrada" ? "Entrada" : "Saída"}: ${m.quantidade}`,
 
           date: new Date(m.created_at).toLocaleDateString("pt-MZ"),
 
@@ -341,7 +359,7 @@ function Dashboard() {
       <div
         className="
           flex
-          h-screen
+          h-dvh
           flex-1
           items-center
           justify-center
@@ -362,7 +380,7 @@ function Dashboard() {
       <div
         className="
           flex
-          h-screen
+          h-dvh
           flex-1
           items-center
           justify-center
@@ -415,7 +433,7 @@ function Dashboard() {
       className="
         dashboard-page
         flex-1
-        h-screen
+        h-dvh
         overflow-auto
         bg-gray-50
         p-4
@@ -465,58 +483,19 @@ function Dashboard() {
     sm:text-base
   "
           >
-            Bem-vindo, {" "}
+            Bem-vindo,{" "}
             <span className="font-semibold text-black">{usuario.nome}</span>!
             Acompanhe o stock e os movimentos da sua operação.
           </p>
         </div>
 
         <Link to="/movimentar" className="w-full sm:w-auto">
-          <button
-            className="
-              flex
-              w-full
-              items-center
-              justify-center
-              gap-2
-
-              rounded-lg
-
-              bg-green-600
-
-              px-3
-              py-2
-
-              text-white
-
-              transition
-
-              hover:bg-green-700
-
-              sm:w-auto
-            "
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+          <button className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 font-bold text-white shadow-md shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-xl sm:w-auto">
+            <ArrowLeftRight />
             Novo movimento
           </button>
         </Link>
       </div>
-
-      {/* =================================================
-          ESTATÍSTICAS
-      ================================================= */}
 
       <div
         className=" 
@@ -595,10 +574,6 @@ function Dashboard() {
             </div>
           ))}
       </div>
-
-      {/* =================================================
-          ALERTA DE ESTOQUE BAIXO
-      ================================================= */}
 
       <div
         className="
@@ -721,10 +696,6 @@ function Dashboard() {
         )}
       </div>
 
-      {/* =================================================
-          MOVIMENTOS RECENTES
-      ================================================= */}
-
       <div
         className="
           rounded-md
@@ -761,7 +732,6 @@ function Dashboard() {
           </h3>
         </div>
 
-        
         {recentMovements.length === 0 ? (
           <p
             className="

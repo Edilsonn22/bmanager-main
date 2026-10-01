@@ -10,14 +10,14 @@ test("e-mails transacionais SMTP enviam conteúdo UTF-8 e escapam dados do utili
     SMTP_HOST: "smtp.teste.local",
     SMTP_USER: "utilizador",
     SMTP_PASSWORD: "senha",
-    EMAIL_FROM: "Vendai <teste@vendai.local>",
+    EMAIL_FROM: "Vendaí <teste@vendai.local>",
   });
 
   try {
     const { enviarBoasVindas, enviarRecuperacaoSenha, enviarConfirmacaoPagamento, enviarAvisoExpiracao } = await import("../services/emailService.js");
     const boasVindas = await enviarBoasVindas({ para: "cliente@teste.local", nome: "Ana <script>", empresa: "Loja & Filhos" });
     const mensagemBoasVindas = JSON.parse(boasVindas.conteudoTeste.toString());
-    assert.equal(mensagemBoasVindas.subject, "Bem-vindo à Vendai");
+    assert.equal(mensagemBoasVindas.subject, "Bem-vindo à Vendaí");
     assert.match(mensagemBoasVindas.html, /Olá, Ana &lt;script&gt;/);
     assert.match(mensagemBoasVindas.html, /Loja &amp; Filhos/);
 

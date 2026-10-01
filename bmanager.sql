@@ -1,4 +1,4 @@
--- Vendai: esquema consolidado completo até à migração 016_scanner_telemovel.sql.
+-- Vendaí: esquema consolidado completo até à migração 016_scanner_telemovel.sql.
 -- Versão do esquema: 2026-09-11.
 -- Importe este arquivo dentro da base vazia selecionada.
 -- O script não apaga nem recria a base fornecida pelo serviço de hospedagem.
@@ -82,6 +82,8 @@ CREATE TABLE Produto (
   tipo_produto ENUM('simples','multiplas') NOT NULL DEFAULT 'simples',
   unidade_base VARCHAR(50) NOT NULL DEFAULT 'Unidade',
   arquivado_em DATETIME DEFAULT NULL,
+  imagem MEDIUMBLOB DEFAULT NULL,
+  imagem_mime VARCHAR(50) DEFAULT NULL,
   PRIMARY KEY (id),
   KEY idx_produto_empresa (empresa_id),
   KEY idx_produto_empresa_arquivado (empresa_id, arquivado_em),
@@ -162,14 +164,28 @@ CREATE TABLE CaixaSessao (
 CREATE TABLE Venda (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT, empresa_id INT UNSIGNED NOT NULL, cliente_id INT UNSIGNED DEFAULT NULL, cliente_nome VARCHAR(255) DEFAULT NULL,
   usuario_id INT UNSIGNED NOT NULL, caixa_sessao_id INT UNSIGNED DEFAULT NULL, numero INT UNSIGNED NOT NULL,
+  idempotencia_id CHAR(36) DEFAULT NULL,
   estado ENUM('concluida','cancelada','parcialmente_devolvida','devolvida') NOT NULL DEFAULT 'concluida',
   subtotal DECIMAL(12,2) NOT NULL, desconto DECIMAL(12,2) NOT NULL DEFAULT 0, total DECIMAL(12,2) NOT NULL,
   cancelada_em TIMESTAMP NULL DEFAULT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id), UNIQUE KEY uq_venda_numero_empresa (empresa_id,numero), KEY idx_venda_empresa_data (empresa_id,created_at),
+  PRIMARY KEY (id), UNIQUE KEY uq_venda_numero_empresa (empresa_id,numero), UNIQUE KEY uq_venda_idempotencia_empresa (empresa_id,idempotencia_id), KEY idx_venda_empresa_data (empresa_id,created_at),
   CONSTRAINT fk_venda_empresa FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE CASCADE,
   CONSTRAINT fk_venda_cliente FOREIGN KEY (cliente_id) REFERENCES Cliente(id) ON DELETE SET NULL,
   CONSTRAINT fk_venda_usuario FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE RESTRICT,
   CONSTRAINT fk_venda_caixa FOREIGN KEY (caixa_sessao_id) REFERENCES CaixaSessao(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE VendaOfflinePendente (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, empresa_id INT UNSIGNED NOT NULL, usuario_id INT UNSIGNED NOT NULL,
+  idempotencia_id CHAR(36) NOT NULL, payload JSON NOT NULL, motivo VARCHAR(500) NOT NULL,
+  estado ENUM('pendente','resolvida') NOT NULL DEFAULT 'pendente', venda_id INT UNSIGNED DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id), UNIQUE KEY uq_venda_offline_idempotencia (empresa_id,idempotencia_id),
+  KEY idx_venda_offline_estado (empresa_id,estado,created_at),
+  CONSTRAINT fk_venda_offline_empresa FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_venda_offline_usuario FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_venda_offline_venda FOREIGN KEY (venda_id) REFERENCES Venda(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE VendaItem (
@@ -339,6 +355,23 @@ CREATE TABLE auditoria (
     ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_auditoria_usuario FOREIGN KEY (usuario_id) REFERENCES Usuario(id)
     ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE CaixaFechoRelatorio (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  caixa_sessao_id INT UNSIGNED NOT NULL,
+  empresa_id INT UNSIGNED NOT NULL,
+  usuario_fecho_id INT UNSIGNED NOT NULL,
+  codigo VARCHAR(40) NOT NULL,
+  resumo JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_caixa_fecho_sessao (caixa_sessao_id),
+  UNIQUE KEY uq_caixa_fecho_codigo_empresa (empresa_id, codigo),
+  KEY idx_caixa_fecho_empresa_data (empresa_id, created_at),
+  CONSTRAINT fk_caixa_fecho_sessao FOREIGN KEY (caixa_sessao_id) REFERENCES CaixaSessao(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_caixa_fecho_empresa FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_caixa_fecho_usuario FOREIGN KEY (usuario_fecho_id) REFERENCES Usuario(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE ScannerSessao (

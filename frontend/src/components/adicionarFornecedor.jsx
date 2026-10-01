@@ -67,7 +67,7 @@ function FormularioFornecedor({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="w-full max-w-xl rounded-xl bg-white shadow-xl">
-        <header className="flex items-center justify-between border-b p-6">
+        <header className="flex items-center justify-between border- p-6">
           <div>
             <h2 className="font-bold text-gray-900">{titulo}</h2>
             <p className="text-sm text-gray-500">{subtitulo}</p>
@@ -118,7 +118,15 @@ function FormularioFornecedor({
                     type="tel"
                     inputMode="numeric"
                     value={form.contacto}
-                    onChange={(evento) => mudar("contacto")({ target: { value: evento.target.value.replace(/\D/g, "").slice(0, 9) } })}
+                    onChange={(evento) =>
+                      mudar("contacto")({
+                        target: {
+                          value: evento.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 9),
+                        },
+                      })
+                    }
                     pattern="[0-9]{9}"
                     minLength="9"
                     maxLength="9"
@@ -139,17 +147,17 @@ function FormularioFornecedor({
           )}
           <div className="flex gap-3 pt-2">
             <button
-              disabled={loading || salvando}
-              className="flex-1 rounded-lg bg-indigo-600 py-2 text-white hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {salvando ? "A guardar..." : textoBotao}
-            </button>
-            <button
               type="button"
               onClick={cancelar}
               className="flex-1 rounded-lg bg-gray-100 py-2 text-gray-700 hover:bg-gray-200"
             >
               Cancelar
+            </button>
+            <button
+              disabled={loading || salvando}
+              className="flex-1 rounded-lg bg-indigo-600 py-2 text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {salvando ? "A guardar..." : textoBotao}
             </button>
           </div>
         </form>

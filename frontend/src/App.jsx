@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/navbar";
 import { AuthProvider, useAuth } from "./features/auth/AuthContext";
@@ -47,8 +47,22 @@ function Layout() {
   return <div className="vendai-app flex h-dvh min-w-0 overflow-hidden bg-gray-50"><Navbar /><Outlet /><Onboarding /></div>;
 }
 
+function ManifestoPwa() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (!manifestLink) return;
+    manifestLink.href = pathname.startsWith("/scanner")
+      ? "/manifest-scanner.webmanifest"
+      : "/manifest.webmanifest";
+  }, [pathname]);
+
+  return null;
+}
+
 export default function App() {
-  return <AuthProvider><BrowserRouter><Suspense fallback={<main className="grid min-h-dvh place-items-center bg-slate-50 text-slate-600" role="status">A carregar...</main>}><Routes>
+  return <AuthProvider><BrowserRouter><ManifestoPwa /><Suspense fallback={<main className="grid min-h-dvh place-items-center bg-slate-50 text-slate-600" role="status">A carregar...</main>}><Routes>
     <Route path="/" element={<Landing />} />
     <Route path="/login" element={<Login />} />
     <Route path="/registo" element={<Register />} />

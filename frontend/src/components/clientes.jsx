@@ -5,22 +5,322 @@ import { Feedback } from "./ui/Feedback";
 const vazio = { nome: "", nuit: "", telefone: "", email: "", endereco: "" };
 
 export default function Clientes() {
-  const [clientes, setClientes] = useState([]); const [form, setForm] = useState(vazio); const [editando, setEditando] = useState(null); const [aberto, setAberto] = useState(false); const [busca, setBusca] = useState(""); const [erro, setErro] = useState(""); const [sucesso, setSucesso] = useState(""); const [loading, setLoading] = useState(false);
-  const carregar = useCallback(async () => { try { const r = await fetch(`${API_URL}/clientes`); const d = await r.json(); if (!r.ok) throw new Error(d.erro); setClientes(d.clientes || []); } catch (e) { setErro(e.message || "Não foi possível carregar os clientes."); } }, []);
-  useEffect(() => { carregar(); }, [carregar]);
-  const visiveis = useMemo(() => { const q = busca.toLowerCase(); return clientes.filter((c) => `${c.nome} ${c.nuit || ""} ${c.telefone || ""} ${c.email || ""}`.toLowerCase().includes(q)); }, [clientes, busca]);
-  const abrirNovo = () => { setEditando(null); setForm(vazio); setAberto(true); };
-  const abrirEdicao = (cliente) => { setEditando(cliente.id); setForm(Object.fromEntries(Object.keys(vazio).map((campo) => [campo, cliente[campo] || ""]))); setAberto(true); };
-  const fechar = () => { setAberto(false); setForm(vazio); setEditando(null); };
-  const salvar = async (evento) => { evento.preventDefault(); setLoading(true); setErro(""); setSucesso(""); try { const r = await fetch(`${API_URL}/clientes${editando ? `/${editando}` : ""}`, { method: editando ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) }); const d = await r.json(); if (!r.ok) throw new Error(d.erro); await carregar(); setSucesso(editando ? "Cliente atualizado com sucesso." : "Cliente criado com sucesso."); fechar(); } catch (e) { setErro(e.message); } finally { setLoading(false); } };
-  return <main className="commerce-page h-dvh min-w-0 flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-    <header className="commerce-header mb-7 flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-indigo-600">Relacionamento</p><h1>Clientes</h1><p className="text-slate-600">Mantenha os dados necessários para vendas e recibos.</p></div><button type="button" onClick={abrirNovo} className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700"><Plus size={19}/>Novo cliente</button></header>
-    <div className="mb-4 space-y-3"><Feedback tipo="erro">{erro}</Feedback><Feedback tipo="sucesso">{sucesso}</Feedback></div>
-    <section className="commerce-panel overflow-hidden"><div className="border-b border-slate-100 p-4"><div className="relative"><Search className="absolute left-3 top-3 text-slate-400" size={19}/><input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Pesquisar nome, NUIT, telefone ou e-mail..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3"/></div></div>
-      <div className="hidden overflow-x-auto md:block"><table><thead><tr><th>Cliente</th><th>NUIT</th><th>Telefone</th><th>E-mail</th><th>Ação</th></tr></thead><tbody>{visiveis.map((c) => <tr key={c.id}><td>{c.nome}</td><td>{c.nuit || "—"}</td><td>{c.telefone || "—"}</td><td>{c.email || "—"}</td><td><button type="button" onClick={() => abrirEdicao(c)} aria-label={`Editar ${c.nome}`} className="rounded-lg p-2 text-indigo-600 hover:bg-indigo-50"><Pencil size={17}/></button></td></tr>)}</tbody></table></div>
-      <div className="grid gap-3 p-4 md:hidden">{visiveis.map((c) => <article key={c.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div className="flex justify-between gap-3"><div><b className="text-slate-900">{c.nome}</b>{c.nuit && <p className="text-xs text-slate-500">NUIT {c.nuit}</p>}</div><button type="button" onClick={() => abrirEdicao(c)} className="rounded-lg bg-white p-2 text-indigo-600"><Pencil size={16}/></button></div>{c.telefone && <p className="mt-3 flex items-center gap-2 text-sm text-slate-600"><Phone size={15}/>{c.telefone}</p>}{c.email && <p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><Mail size={15}/>{c.email}</p>}</article>)}</div>
-      {!visiveis.length && <div className="p-12 text-center"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-indigo-50 text-indigo-500"><Users/></span><p className="mt-4 font-bold text-slate-800">{busca ? "Nenhum cliente corresponde à pesquisa." : "Ainda não existem clientes."}</p>{!busca && <button onClick={abrirNovo} className="mt-2 font-semibold text-indigo-600">Criar o primeiro cliente</button>}</div>}
-    </section>
-    {aberto && <div className="fixed inset-0 z-[110] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm"><form onSubmit={salvar} className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl"><header className="flex items-center justify-between border-b border-slate-100 p-5"><div><h2 className="text-xl font-bold">{editando ? "Editar cliente" : "Novo cliente"}</h2><p className="text-sm text-slate-500">Nome é o único campo obrigatório.</p></div><button type="button" onClick={fechar} aria-label="Fechar" className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"><X/></button></header><div className="grid gap-4 p-5 sm:grid-cols-2">{Object.keys(vazio).map((campo) => { const numerico = campo === "nuit" || campo === "telefone"; return <label key={campo} className={`text-sm font-semibold text-slate-700 ${campo === "nome" || campo === "endereco" ? "sm:col-span-2" : ""}`}>{campo === "nuit" ? "NUIT" : campo.charAt(0).toUpperCase() + campo.slice(1)}<input type={campo === "email" ? "email" : campo === "telefone" ? "tel" : "text"} inputMode={numerico ? "numeric" : undefined} pattern={numerico ? "[0-9]{9}" : undefined} minLength={numerico ? 9 : undefined} maxLength={numerico ? 9 : undefined} title={numerico ? "Introduza exatamente 9 dígitos" : undefined} required={campo === "nome"} value={form[campo]} onChange={(e) => setForm({ ...form, [campo]: numerico ? e.target.value.replace(/\D/g, "").slice(0, 9) : e.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5"/></label>; })}</div><footer className="flex flex-col-reverse gap-2 border-t bg-slate-50 p-5 sm:flex-row sm:justify-end"><button type="button" onClick={fechar} className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 font-semibold">Cancelar</button><button disabled={loading} className="rounded-xl bg-indigo-600 px-5 py-2.5 font-bold text-white disabled:opacity-50">{loading ? "A guardar..." : editando ? "Guardar alterações" : "Guardar cliente"}</button></footer></form></div>}
-  </main>;
+  const [clientes, setClientes] = useState([]);
+  const [form, setForm] = useState(vazio);
+  const [editando, setEditando] = useState(null);
+  const [aberto, setAberto] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+  const [loading, setLoading] = useState(false);
+  const carregar = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_URL}/clientes`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.erro);
+      setClientes(d.clientes || []);
+    } catch (e) {
+      setErro(e.message || "Não foi possível carregar os clientes.");
+    }
+  }, []);
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+  const visiveis = useMemo(() => {
+    const q = busca.toLowerCase();
+    return clientes.filter((c) =>
+      `${c.nome} ${c.nuit || ""} ${c.telefone || ""} ${c.email || ""}`
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [clientes, busca]);
+  const abrirNovo = () => {
+    setEditando(null);
+    setForm(vazio);
+    setAberto(true);
+  };
+  const abrirEdicao = (cliente) => {
+    setEditando(cliente.id);
+    setForm(
+      Object.fromEntries(
+        Object.keys(vazio).map((campo) => [campo, cliente[campo] || ""]),
+      ),
+    );
+    setAberto(true);
+  };
+  const fechar = () => {
+    setAberto(false);
+    setForm(vazio);
+    setEditando(null);
+  };
+  const salvar = async (evento) => {
+    evento.preventDefault();
+    setLoading(true);
+    setErro("");
+    setSucesso("");
+    try {
+      const r = await fetch(
+        `${API_URL}/clientes${editando ? `/${editando}` : ""}`,
+        {
+          method: editando ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        },
+      );
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.erro);
+      await carregar();
+      setSucesso(
+        editando
+          ? "Cliente atualizado com sucesso."
+          : "Cliente criado com sucesso.",
+      );
+      fechar();
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <main className="commerce-page h-dvh min-w-0 flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+      <header className="commerce-header mb-7 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-indigo-600">
+            Relacionamento
+          </p>
+          <h1>Clientes</h1>
+          <p className="text-slate-600">
+            Mantenha os dados necessários para vendas e recibos.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={abrirNovo}
+          className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white shadow-lg transition hover:-translate-y-0.5 shadow-indigo-200 hover:bg-indigo-700"
+        >
+          <Plus size={19} />
+          Novo cliente
+        </button>
+      </header>
+      <div className="mb-4 space-y-3">
+        <Feedback tipo="erro">{erro}</Feedback>
+        <Feedback tipo="sucesso">{sucesso}</Feedback>
+      </div>
+      <section className="commerce-panel overflow-hidden">
+        <div className="border-b border-slate-100 p-4">
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-3 text-slate-400"
+              size={19}
+            />
+            <input
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Pesquisar nome, NUIT, telefone ou e-mail..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3"
+            />
+          </div>
+        </div>
+        <div className="hidden overflow-x-auto md:block">
+          <table>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>NUIT</th>
+                <th>Telefone</th>
+                <th>E-mail</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visiveis.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.nome}</td>
+                  <td>{c.nuit || "—"}</td>
+                  <td>{c.telefone || "—"}</td>
+                  <td>{c.email || "—"}</td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => abrirEdicao(c)}
+                      aria-label={`Editar ${c.nome}`}
+                      className="rounded-lg p-2 text-indigo-600 hover:bg-indigo-50"
+                    >
+                      <Pencil size={17} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="grid gap-3 p-4 md:hidden">
+          {visiveis.map((c) => (
+            <article
+              key={c.id}
+              className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+            >
+              <div className="flex justify-between gap-3">
+                <div>
+                  <b className="text-slate-900">{c.nome}</b>
+                  {c.nuit && (
+                    <p className="text-xs text-slate-500">NUIT {c.nuit}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => abrirEdicao(c)}
+                  className="rounded-lg bg-white p-2 text-indigo-600"
+                >
+                  <Pencil size={16} />
+                </button>
+              </div>
+              {c.telefone && (
+                <p className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+                  <Phone size={15} />
+                  {c.telefone}
+                </p>
+              )}
+              {c.email && (
+                <p className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                  <Mail size={15} />
+                  {c.email}
+                </p>
+              )}
+            </article>
+          ))}
+        </div>
+        {!visiveis.length && (
+          <div className="p-12 text-center">
+            <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-indigo-50 text-indigo-500">
+              <Users />
+            </span>
+            <p className="mt-4 font-bold text-slate-800">
+              {busca
+                ? "Nenhum cliente corresponde à pesquisa."
+                : "Ainda não existem clientes."}
+            </p>
+            {!busca && (
+              <button
+                onClick={abrirNovo}
+                className="mt-2 font-semibold text-indigo-600"
+              >
+                Criar o primeiro cliente
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+      {aberto && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/30 p-4">
+          <form
+            onSubmit={salvar}
+            className="w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-xl"
+          >
+            <header className="flex items-center justify-between border-b border-gray-100 p-6">
+              <div>
+                <h2 className="font-bold text-gray-900">
+                  {editando ? "Editar cliente" : "Novo cliente"}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Registe os dados do cliente para vendas e recibos.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={fechar}
+                aria-label="Fechar"
+                className="rounded-lg p-2 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </header>
+            <div className="space-y-4 p-6">
+              {erro && (
+                <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                  {erro}
+                </p>
+              )}
+              <label className="block text-sm font-medium text-gray-700">
+                Nome *
+                <input
+                  value={form.nome}
+                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                  required
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </label>
+              <label className="block text-sm font-medium text-gray-700">
+                NUIT
+                <input
+                  inputMode="numeric"
+                  value={form.nuit}
+                  onChange={(e) => setForm({ ...form, nuit: e.target.value.replace(/\D/g, "").slice(0, 9) })}
+                  pattern="[0-9]{9}"
+                  minLength="9"
+                  maxLength="9"
+                  title="Introduza exatamente 9 dígitos"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </label>
+              <label className="block text-sm font-medium text-gray-700">
+                E-mail
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </label>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Telefone
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={form.telefone}
+                    onChange={(e) => setForm({ ...form, telefone: e.target.value.replace(/\D/g, "").slice(0, 9) })}
+                    pattern="[0-9]{9}"
+                    minLength="9"
+                    maxLength="9"
+                    title="Introduza exatamente 9 dígitos"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Endereço
+                  <input
+                    value={form.endereco}
+                    onChange={(e) => setForm({ ...form, endereco: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </label>
+              </div>
+            </div>
+            <footer className="flex gap-3 p-6 pt-2">
+              <button
+                type="button"
+                onClick={fechar}
+                className="flex-1 rounded-lg bg-gray-100 py-2 text-gray-700 hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={loading}
+                className="flex-1 rounded-lg bg-indigo-600 py-2 text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {loading
+                  ? "A guardar..."
+                  : editando
+                    ? "Guardar alterações"
+                    : "Guardar cliente"}
+              </button>
+            </footer>
+          </form>
+        </div>
+      )}
+    </main>
+  );
 }
