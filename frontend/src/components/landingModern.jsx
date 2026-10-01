@@ -12,8 +12,8 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import { API_URL } from "../api/authenticatedFetch";
-import painelDemo from "../assets/screenshots/panel.png";
-import novaVendaDemo from "../assets/screenshots/panel.png";
+import painelDemo from "../assets/screenshots/visaogeral.png";
+import novaVendaDemo from "../assets/screenshots/nova-venda.png";
 import caixaDemo from "../assets/screenshots/caixa.png";
 import relatoriosDemo from "../assets/screenshots/relatorios.png";
 import utilizadoresDemo from "../assets/screenshots/utilizadores.png";
