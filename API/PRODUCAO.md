@@ -25,3 +25,10 @@ mysqldump -u $env:DB_USER -p$env:DB_PASSWORD $env:DB_NAME > backup-$(Get-Date -F
 - Atualização: crie o backup, execute `npm run migrate:status` e depois `npm run migrate` antes de iniciar a nova API.
 - Nunca execute `bmanager.sql` sobre uma base existente: ele remove e recria o banco.
 - Se o deploy falhar após uma migração, mantenha a API anterior e restaure o backup somente após confirmar que uma migração corretiva não é suficiente.
+
+## Railway
+
+- Configure o serviço da API com `Root Directory` igual a `API` e use o Dockerfile dessa pasta.
+- `railway.json` define `npm run migrate` como `preDeployCommand`. O Railway só inicia a nova versão quando a migração termina com sucesso.
+- Configure `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` e `DB_NAME` como referências às variáveis do serviço MySQL Railway. A API não lê automaticamente os nomes `MYSQLHOST`/`MYSQLUSER`.
+- Faça backup antes do primeiro deploy com migrações automáticas e confirme nos logs que `npm run migrate` terminou sem erro.
